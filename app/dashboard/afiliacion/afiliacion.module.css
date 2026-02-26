@@ -1,0 +1,162 @@
+.page {
+  min-height: 100vh;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 18% 6%, rgba(147, 51, 234, 0.22), transparent 36%),
+    radial-gradient(circle at 86% 10%, rgba(59, 130, 246, 0.12), transparent 40%),
+    linear-gradient(180deg, #0a0812 0%, #06060d 52%, #030307 100%);
+  color: #f8fafc;
+}
+
+.card {
+  max-width: 760px;
+  margin: 0 auto;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: linear-gradient(180deg, rgba(8, 12, 24, 0.95), rgba(4, 7, 16, 0.95));
+  box-shadow:
+    0 16px 28px rgba(2, 6, 23, 0.5),
+    inset 0 1px 0 rgba(148, 163, 184, 0.12);
+  padding: 18px;
+}
+
+.header {
+  margin-bottom: 12px;
+}
+
+.kicker {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.header h1 {
+  margin: 6px 0 8px;
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+}
+
+.helper {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+.formRow {
+  display: grid;
+  gap: 8px;
+}
+
+.label {
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.inputRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.inputRow input {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(2, 6, 23, 0.72);
+  color: #f8fafc;
+  padding: 0 12px;
+  outline: none;
+}
+
+.inputRow input:focus {
+  border-color: rgba(125, 211, 252, 0.68);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.inputRow button {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.55);
+  background: linear-gradient(120deg, rgba(79, 70, 229, 0.92), rgba(37, 99, 235, 0.9));
+  color: #f8fafc;
+  font-weight: 800;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.inputRow button:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.ok,
+.error {
+  margin: 12px 0 0;
+  border-radius: 12px;
+  padding: 9px 11px;
+  font-size: 0.9rem;
+}
+
+.ok {
+  border: 1px solid rgba(74, 222, 128, 0.45);
+  background: rgba(20, 83, 45, 0.32);
+  color: #bbf7d0;
+}
+
+.error {
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  background: rgba(127, 29, 29, 0.28);
+  color: #fecaca;
+}
+
+.rules {
+  margin-top: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.48);
+  padding: 12px;
+}
+
+.rules h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.rules ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: #cbd5e1;
+}
+
+.back {
+  margin-top: 14px;
+  display: inline-flex;
+  text-decoration: none;
+  border-radius: 10px;
+  border: 1px solid rgba(125, 211, 252, 0.45);
+  background: rgba(8, 47, 73, 0.3);
+  color: #bae6fd;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+@media (max-width: 620px) {
+  .page {
+    padding: 12px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .inputRow {
+    grid-template-columns: 1fr;
+  }
+
+  .inputRow button {
+    width: 100%;
+  }
+}

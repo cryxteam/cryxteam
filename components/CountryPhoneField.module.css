@@ -1,0 +1,127 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.topRow {
+  display: grid;
+  grid-template-columns: 1fr 170px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.phoneInput {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #020617;
+  color: #fff;
+  font-size: 14px;
+  margin-bottom: 0;
+}
+
+.phoneInput:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.codeButton {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #020617;
+  color: #e5e7eb;
+  border-radius: 14px;
+  padding: 0 12px;
+  min-width: 170px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.codeButton:hover {
+  border-color: rgba(107, 114, 128, 0.9);
+}
+
+.dropdown {
+  margin-top: 8px;
+  background: #f3f4f6;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.38);
+  overflow: hidden;
+  z-index: 20;
+}
+
+.searchInput {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: #fff;
+  color: #111827;
+  font-size: 15px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.optionsList {
+  max-height: 150px;
+  overflow-y: auto;
+  background: #f3f4f6;
+}
+
+.option {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  background: transparent;
+  color: #111827;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+}
+
+.option:hover {
+  background: #e5e7eb;
+}
+
+.optionLeft {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.optionRight {
+  min-width: 48px;
+  text-align: right;
+}
+
+.empty {
+  padding: 10px 12px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .topRow {
+    grid-template-columns: 1fr;
+  }
+
+  .codeButton {
+    min-height: 44px;
+    width: 100%;
+  }
+
+  .searchInput {
+    font-size: 14px;
+  }
+}

@@ -1,0 +1,163 @@
+@import "../styles/variables.css";
+@import "../styles/components.css";
+
+:root {
+  --ui-scrollbar-size: 12px;
+  --ui-scrollbar-track: linear-gradient(
+    180deg,
+    rgba(9, 10, 20, 0.96) 0%,
+    rgba(6, 8, 18, 0.98) 100%
+  );
+  --ui-scrollbar-track-border: rgba(125, 211, 252, 0.18);
+  --ui-scrollbar-thumb: linear-gradient(
+    180deg,
+    rgba(139, 92, 246, 0.96) 0%,
+    rgba(124, 58, 237, 0.94) 38%,
+    rgba(8, 145, 178, 0.95) 100%
+  );
+  --ui-scrollbar-thumb-border: rgba(196, 181, 253, 0.45);
+  --ui-scrollbar-thumb-hover: linear-gradient(
+    180deg,
+    rgba(168, 85, 247, 1) 0%,
+    rgba(139, 92, 246, 0.98) 40%,
+    rgba(6, 182, 212, 0.98) 100%
+  );
+}
+
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.95) rgba(8, 11, 22, 0.95);
+}
+*
+ {
+  box-sizing: border-box;
+}
+
+*::-webkit-scrollbar {
+  width: var(--ui-scrollbar-size);
+  height: var(--ui-scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--ui-scrollbar-track);
+  border: 1px solid var(--ui-scrollbar-track-border);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--ui-scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid rgba(5, 8, 18, 0.9);
+  box-shadow:
+    inset 0 0 0 1px var(--ui-scrollbar-thumb-border),
+    0 0 12px rgba(139, 92, 246, 0.38);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+:where(
+    input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']):not([type='color']):not([type='hidden']),
+    select,
+    textarea
+  ) {
+  color-scheme: dark;
+  background: linear-gradient(180deg, rgba(9, 12, 24, 0.94), rgba(6, 9, 18, 0.97));
+  color: #f8fafc;
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 1px 0 rgba(226, 232, 240, 0.04),
+    0 8px 18px rgba(2, 6, 23, 0.24);
+}
+
+:where(
+    input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']):not([type='color']):not([type='hidden']),
+    select,
+    textarea
+  )::placeholder {
+  color: #90a4bf;
+}
+
+:where(
+    input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']):not([type='color']):not([type='hidden']),
+    select,
+    textarea
+  ):focus {
+  outline: none;
+  border-color: rgba(125, 211, 252, 0.74);
+  box-shadow:
+    0 0 0 3px rgba(14, 165, 233, 0.2),
+    0 12px 22px rgba(2, 6, 23, 0.3);
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at top, #111, #000);
+  color: #fff;
+}
+
+/* CENTER CARD */
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: #0f0f0f;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+/* TEXT */
+.auth-card h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* INPUTS */
+.auth-card input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  border: 1px solid #222;
+  background: #151515;
+  color: white;
+}
+
+/* BUTTON */
+.auth-card button {
+  width: 100%;
+  padding: 10px;
+  background: #5865f2;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.auth-card button:hover {
+  opacity: 0.9;
+}
+
+/* MESSAGE */
+.auth-msg {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 14px;
+  color: #facc15;
+}
