@@ -1043,6 +1043,30 @@ function getProductAccountTypeDbCandidates(typeRaw: string) {
   return ['full_account', 'cuenta_completa', 'full'] as const
 }
 
+function getProviderCommissionAmount(accountTypeRaw: string) {
+  return isProfilesAccountType(accountTypeRaw) ? 0.5 : 1
+}
+
+function resolveRenewalAmountFromProductRow(row: Record<string, unknown>, fallbackAmount: number) {
+  const candidates = [
+    row.renewal_price,
+    row.price_renewal,
+    row.renewal_price_affiliate,
+    row.price_renovation,
+    row.renewalPrice,
+    row.price_affiliate,
+    row.price_logged,
+    row.price_guest,
+    fallbackAmount,
+  ]
+
+  for (const candidate of candidates) {
+    const parsed = toNullableNumber(candidate)
+    if (parsed !== null && parsed > 0) return parsed
+  }
+  return 0
+}
+
 function formatCredentials(value: unknown): string {
   if (value === null || value === undefined) return ''
   if (typeof value === 'string') {
@@ -1542,6 +1566,10 @@ export default function UserDashboardPage() {
   const [userOrderContactFeedback, setUserOrderContactFeedback] = useState<
     Record<string, UserOrderContactFeedback>
   >({})
+  const [userOrderRenewing, setUserOrderRenewing] = useState<Record<string, boolean>>({})
+  const [userOrderRenewFeedback, setUserOrderRenewFeedback] = useState<
+    Record<string, UserOrderContactFeedback>
+  >({})
   const [userOrderEditModal, setUserOrderEditModal] = useState<UserOrderEditModalState | null>(null)
   const [userSupportModal, setUserSupportModal] = useState<UserSupportModalState | null>(null)
   const [userSupportModalSaving, setUserSupportModalSaving] = useState(false)
@@ -1727,6 +1755,8 @@ export default function UserDashboardPage() {
       setUserTicketFeedback({})
       setUserOrderContactSaving({})
       setUserOrderContactFeedback({})
+      setUserOrderRenewing({})
+      setUserOrderRenewFeedback({})
       setUserOrderEditModal(null)
       setUserSupportModal(null)
       setUserSupportModalSaving(false)
@@ -2345,6 +2375,23 @@ export default function UserDashboardPage() {
       return nextFeedback
     })
 
+    setUserOrderRenewing(previous => {
+      const nextSaving: Record<string, boolean> = {}
+      for (const order of ownedProducts) {
+        if (previous[order.id]) nextSaving[order.id] = true
+      }
+      return nextSaving
+    })
+
+    setUserOrderRenewFeedback(previous => {
+      const nextFeedback: Record<string, UserOrderContactFeedback> = {}
+      for (const order of ownedProducts) {
+        const rowFeedback = previous[order.id]
+        if (rowFeedback) nextFeedback[order.id] = rowFeedback
+      }
+      return nextFeedback
+    })
+
     setUserOrderEditModal(previous => {
       if (!previous) return previous
       const exists = ownedProducts.some(order => order.id === previous.orderId)
@@ -2733,6 +2780,203 @@ export default function UserDashboardPage() {
       }))
     } finally {
       setUserOrderContactSaving(previous => ({ ...previous, [order.id]: false }))
+    }
+  }
+
+  async function handleUserRenewOrder(order: OwnedProduct) {
+    const orderId = order.id.trim()
+    if (!userId || !orderId) {
+      setUserOrderRenewFeedback(previous => ({
+        ...previous,
+        [order.id]: { type: 'error', text: 'Sesion invalida para renovar.' },
+      }))
+      return
+    }
+
+    const wantsRenew =
+      typeof window === 'undefined' ||
+      window.confirm(`Confirmar renovacion de ${order.productName}? Se descontara saldo de tu cuenta.`)
+    if (!wantsRenew) return
+
+    setUserOrderRenewing(previous => ({ ...previous, [orderId]: true }))
+    setUserOrderRenewFeedback(previous => {
+      const next = { ...previous }
+      delete next[orderId]
+      return next
+    })
+
+    let buyerBalanceCurrent = 0
+    let buyerDebited = false
+    let providerCredited = false
+    let providerCreditedId = ''
+    let providerBalanceColumn = ''
+    let providerBalanceCurrent = 0
+
+    try {
+      const [orderResult, buyerProfileResult] = await Promise.all([
+        supabase
+          .from('orders')
+          .select('id, buyer_id, provider_id, product_id, account_type, duration_days, expires_at, starts_at, status, price_paid')
+          .eq('id', orderId)
+          .eq('buyer_id', userId)
+          .maybeSingle(),
+        supabase.from('profiles').select('balance').eq('id', userId).maybeSingle(),
+      ])
+
+      if (orderResult.error) throw new Error(orderResult.error.message)
+      const orderRow = (orderResult.data ?? null) as Record<string, unknown> | null
+      if (!orderRow?.id) throw new Error('No se encontro la compra para renovar.')
+
+      if (buyerProfileResult.error) throw new Error(buyerProfileResult.error.message)
+      buyerBalanceCurrent = Math.max(
+        0,
+        toNumber((buyerProfileResult.data as Record<string, unknown> | null)?.balance, 0)
+      )
+
+      const productId = Math.floor(toNumber(orderRow.product_id ?? order.productId, 0))
+      if (productId <= 0) throw new Error('La compra no tiene producto valido.')
+
+      const providerId = toText(orderRow.provider_id) || order.providerId
+      if (!providerId) throw new Error('La compra no tiene proveedor asignado.')
+
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', productId)
+        .maybeSingle()
+      if (productError) throw new Error(productError.message)
+      const productRow = (productData ?? null) as Record<string, unknown> | null
+      if (!productRow) throw new Error('No se encontro el producto de la compra.')
+      if (!isTrueLike(productRow.renewable)) throw new Error('Este producto no es renovable.')
+
+      const accountType =
+        toText(orderRow.account_type) || toText(productRow.account_type) || order.accountType
+      const renewalAmount = resolveRenewalAmountFromProductRow(
+        productRow,
+        Math.max(0, toNumber(orderRow.price_paid, order.pricePaid))
+      )
+      if (!Number.isFinite(renewalAmount) || renewalAmount <= 0) {
+        throw new Error('No se pudo calcular monto de renovacion.')
+      }
+      if (buyerBalanceCurrent + 1e-9 < renewalAmount) {
+        throw new Error(`Saldo insuficiente. Necesitas ${formatMoney(renewalAmount)}.`)
+      }
+
+      const commissionAmount = getProviderCommissionAmount(accountType)
+      const providerCredit = Math.max(0, renewalAmount - commissionAmount)
+      const nextBuyerBalance = Number((buyerBalanceCurrent - renewalAmount).toFixed(2))
+
+      const { error: buyerUpdateError } = await supabase
+        .from('profiles')
+        .update({ balance: nextBuyerBalance })
+        .eq('id', userId)
+      if (buyerUpdateError) throw new Error(`No se pudo descontar saldo. ${buyerUpdateError.message}`)
+      buyerDebited = true
+
+      if (providerCredit > 0) {
+        const { data: providerProfileData, error: providerReadError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', providerId)
+          .maybeSingle()
+        if (providerReadError) throw new Error(providerReadError.message)
+
+        const providerRow = (providerProfileData ?? null) as Record<string, unknown> | null
+        if (!providerRow) throw new Error('No se encontro perfil del proveedor para acreditar saldo.')
+
+        providerBalanceColumn =
+          PROVIDER_BALANCE_KEYS.find(key => Object.prototype.hasOwnProperty.call(providerRow, key)) ??
+          'provider_balance'
+        providerBalanceCurrent = Math.max(0, toNumber(providerRow[providerBalanceColumn], 0))
+        const nextProviderBalance = Number((providerBalanceCurrent + providerCredit).toFixed(2))
+
+        const { error: providerUpdateError } = await supabase
+          .from('profiles')
+          .update({ [providerBalanceColumn]: nextProviderBalance })
+          .eq('id', providerId)
+        if (providerUpdateError) {
+          throw new Error(`No se pudo acreditar saldo al proveedor. ${providerUpdateError.message}`)
+        }
+        providerCredited = true
+        providerCreditedId = providerId
+      }
+
+      const durationRaw = toNullableNumber(
+        productRow.duration_days ?? orderRow.duration_days ?? order.durationDays
+      )
+      const durationDays = durationRaw === null ? null : Math.max(1, Math.floor(durationRaw))
+      if (durationDays === null) throw new Error('Este producto no tiene duracion valida para renovar.')
+
+      const now = new Date()
+      const currentExpiresRaw = toText(orderRow.expires_at) || order.expiresAt || ''
+      const currentExpiresDate = currentExpiresRaw ? new Date(currentExpiresRaw) : null
+      const hasActiveExpiry =
+        currentExpiresDate !== null &&
+        !Number.isNaN(currentExpiresDate.getTime()) &&
+        currentExpiresDate.getTime() > now.getTime()
+      const baseDate = hasActiveExpiry && currentExpiresDate ? currentExpiresDate : now
+      const nextExpiresAt = new Date(baseDate.getTime() + durationDays * 86400000).toISOString()
+      const startsAt = toText(orderRow.starts_at) || order.startsAt || now.toISOString()
+      const currentStatus = toText(orderRow.status)
+      const nextStatus = isPaidLikeOrderStatus(currentStatus) ? currentStatus : 'paid'
+
+      const { error: orderUpdateError } = await supabase
+        .from('orders')
+        .update({
+          starts_at: startsAt,
+          expires_at: nextExpiresAt,
+          duration_days: durationDays,
+          status: nextStatus,
+        })
+        .eq('id', orderId)
+        .eq('buyer_id', userId)
+      if (orderUpdateError) {
+        throw new Error(`No se pudo actualizar vencimiento. ${orderUpdateError.message}`)
+      }
+
+      setOwnedProducts(previous =>
+        previous.map(item =>
+          item.id === orderId
+            ? {
+                ...item,
+                startsAt,
+                expiresAt: nextExpiresAt,
+                durationDays,
+                daysLeft: calculateDaysLeft(nextExpiresAt),
+                status: nextStatus,
+              }
+            : item
+        )
+      )
+      setUserOrderRenewFeedback(previous => ({
+        ...previous,
+        [orderId]: {
+          type: 'ok',
+          text: `Renovado: ${formatMoney(renewalAmount)}. Proveedor recibe ${formatMoney(
+            Math.max(0, renewalAmount - commissionAmount)
+          )}.`,
+        },
+      }))
+      setOrdersReloadSeq(previous => previous + 1)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error desconocido.'
+
+      if (providerCredited && providerBalanceColumn && providerCreditedId) {
+        await supabase
+          .from('profiles')
+          .update({ [providerBalanceColumn]: providerBalanceCurrent })
+          .eq('id', providerCreditedId)
+      }
+      if (buyerDebited) {
+        await supabase.from('profiles').update({ balance: buyerBalanceCurrent }).eq('id', userId)
+      }
+
+      setUserOrderRenewFeedback(previous => ({
+        ...previous,
+        [orderId]: { type: 'error', text: `No se pudo renovar. ${message}` },
+      }))
+    } finally {
+      setUserOrderRenewing(previous => ({ ...previous, [orderId]: false }))
     }
   }
 
@@ -11455,6 +11699,12 @@ export default function UserDashboardPage() {
                                       ? styles.userDaysBubbleYellow
                                       : styles.userDaysBubbleGreen
                               const contactFeedback = userOrderContactFeedback[order.id]
+                              const renewFeedback = userOrderRenewFeedback[order.id]
+                              const isRenewingOrder = Boolean(userOrderRenewing[order.id])
+                              const canRenewOrder =
+                                order.productId !== null &&
+                                order.providerId.trim().length > 0 &&
+                                order.renewableLabel.trim().toLowerCase() === 'renovable'
 
                               return (
                                 <tr key={order.id}>
@@ -11580,20 +11830,39 @@ export default function UserDashboardPage() {
                                   <td data-label='INICIO'>{startDateLabel}</td>
                                   <td data-label='FIN'>{endDateLabel}</td>
                                   <td data-label='DÍAS'>
-                                    {expiryReminderLink && computedDaysLeft !== null ? (
-                                      <a
-                                        href={expiryReminderLink}
-                                        target='_blank'
-                                        rel='noopener noreferrer'
-                                        className={`${styles.userDaysBubble} ${daysBubbleToneClass}`}
-                                        title='Enviar aviso de vencimiento'
-                                        aria-label='Enviar aviso de vencimiento'
+                                    <div className={styles.userDaysCell}>
+                                      {expiryReminderLink && computedDaysLeft !== null ? (
+                                        <a
+                                          href={expiryReminderLink}
+                                          target='_blank'
+                                          rel='noopener noreferrer'
+                                          className={`${styles.userDaysBubble} ${daysBubbleToneClass}`}
+                                          title='Enviar aviso de vencimiento'
+                                          aria-label='Enviar aviso de vencimiento'
+                                        >
+                                          {daysBubbleValue}
+                                        </a>
+                                      ) : (
+                                        <span className={`${styles.userDaysBubble} ${daysBubbleToneClass}`}>
+                                          {daysBubbleValue}
+                                        </span>
+                                      )}
+                                      <button
+                                        type='button'
+                                        className={styles.userRenewButton}
+                                        disabled={!canRenewOrder || isRenewingOrder}
+                                        onClick={() => void handleUserRenewOrder(order)}
                                       >
-                                        {daysBubbleValue}
-                                      </a>
-                                    ) : (
-                                      <span className={`${styles.userDaysBubble} ${daysBubbleToneClass}`}>
-                                        {daysBubbleValue}
+                                        {isRenewingOrder ? 'Renovando...' : 'Renovar'}
+                                      </button>
+                                    </div>
+                                    {renewFeedback && (
+                                      <span
+                                        className={
+                                          renewFeedback.type === 'ok' ? styles.userInlineOk : styles.userInlineError
+                                        }
+                                      >
+                                        {renewFeedback.text}
                                       </span>
                                     )}
                                   </td>

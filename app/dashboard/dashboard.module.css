@@ -6087,6 +6087,8 @@
   color: #e2e8f0;
   font-size: 0.84rem;
   vertical-align: top;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .userProductsTable tbody tr:hover {
@@ -6592,6 +6594,42 @@
   animation: userDaysPulse 2.2s ease-in-out infinite;
 }
 
+.userDaysCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.userRenewButton {
+  border: 1px solid rgba(125, 211, 252, 0.5);
+  border-radius: 999px;
+  background:
+    linear-gradient(120deg, rgba(14, 116, 144, 0.68), rgba(29, 78, 216, 0.72));
+  color: #f8fafc;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    filter 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.userRenewButton:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 8px 14px rgba(2, 6, 23, 0.32);
+}
+
+.userRenewButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+  box-shadow: none;
+}
+
 .userDaysBubble:hover {
   transform: translateY(-1px) scale(1.04);
   filter: brightness(1.05);
@@ -6655,6 +6693,12 @@
   align-items: center;
   gap: 8px;
   min-height: 26px;
+  min-width: 0;
+}
+
+.userPasswordCell span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .userPasswordToggle {
@@ -8092,16 +8136,19 @@
       radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.1), transparent 46%),
       linear-gradient(180deg, rgba(20, 13, 37, 0.9), rgba(8, 11, 28, 0.92));
     padding: 10px 10px 8px;
+    overflow: hidden;
   }
 
   .userProductsTable tbody td {
     display: grid;
-    grid-template-columns: minmax(84px, auto) minmax(0, 1fr);
+    grid-template-columns: 76px minmax(0, 1fr);
     align-items: start;
     gap: 8px;
     padding: 6px 0;
     border-bottom: 1px dashed rgba(148, 163, 184, 0.2);
     font-size: 0.8rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .userProductsTable tbody td:last-child {
@@ -8116,7 +8163,8 @@
     font-weight: 900;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: break-word;
     padding-top: 2px;
   }
 
@@ -8131,11 +8179,18 @@
   .userProductCellMain,
   .userCellStack {
     justify-items: start;
+    min-width: 0;
   }
 
   .userInlineValueWithEdit {
     align-items: center;
     flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .userInlineValueWithEdit span {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .userCellActionsRow {
@@ -8146,6 +8201,11 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-start;
+    min-width: 0;
+  }
+
+  .userPasswordCell span {
+    overflow-wrap: anywhere;
   }
 
   .userIconLink,
@@ -8158,6 +8218,16 @@
     width: 32px;
     height: 32px;
     font-size: 0.72rem;
+  }
+
+  .userDaysCell {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .userRenewButton {
+    font-size: 0.64rem;
+    padding: 4px 8px;
   }
 
   .rechargeHero {

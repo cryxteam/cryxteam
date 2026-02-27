@@ -577,6 +577,10 @@ export default function ProductsPage() {
   const [catalogReloadSeq, setCatalogReloadSeq] = useState(0)
   const [trendOrdersByProduct, setTrendOrdersByProduct] = useState<Record<number, number>>({})
   const [viewerPaidProductIds, setViewerPaidProductIds] = useState<number[]>([])
+  const [catalogViewportWidth, setCatalogViewportWidth] = useState(() =>
+    typeof window === 'undefined' ? 1280 : window.innerWidth
+  )
+  const [catalogPage, setCatalogPage] = useState(1)
 
   useEffect(() => {
     let mounted = true
@@ -1039,6 +1043,15 @@ export default function ProductsPage() {
     }
   }, [activePurchaseId])
 
+  useEffect(() => {
+    const onResize = () => {
+      setCatalogViewportWidth(window.innerWidth)
+    }
+    onResize()
+    window.addEventListener('resize', onResize, { passive: true })
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   const sortedProducts = useMemo(() => {
     return [...products].sort((a, b) => b.stock - a.stock)
   }, [products])
@@ -1151,6 +1164,43 @@ export default function ProductsPage() {
     })
   }, [sortedProducts, selectedCategory, searchTerm, activeNameFilter])
 
+  const catalogColumns = useMemo(() => {
+    if (catalogViewportWidth <= 860) return 2
+    if (catalogViewportWidth <= 980) return 3
+    return 4
+  }, [catalogViewportWidth])
+
+  const catalogPageSize = useMemo(() => Math.max(1, catalogColumns * 3), [catalogColumns])
+
+  const catalogTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredProducts.length / catalogPageSize)),
+    [filteredProducts.length, catalogPageSize]
+  )
+
+  const paginatedProducts = useMemo(() => {
+    const safePage = Math.max(1, Math.min(catalogPage, catalogTotalPages))
+    const start = (safePage - 1) * catalogPageSize
+    return filteredProducts.slice(start, start + catalogPageSize)
+  }, [filteredProducts, catalogPage, catalogPageSize, catalogTotalPages])
+
+  const activeCatalogPage = Math.max(1, Math.min(catalogPage, catalogTotalPages))
+
+  const catalogPageNumbers = useMemo(() => {
+    const visibleWindow = 5
+    if (catalogTotalPages <= visibleWindow) {
+      return Array.from({ length: catalogTotalPages }, (_, index) => index + 1)
+    }
+
+    const half = Math.floor(visibleWindow / 2)
+    let start = Math.max(1, activeCatalogPage - half)
+    let end = start + visibleWindow - 1
+    if (end > catalogTotalPages) {
+      end = catalogTotalPages
+      start = end - visibleWindow + 1
+    }
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index)
+  }, [activeCatalogPage, catalogTotalPages])
+
   const activePurchaseProduct = useMemo(() => {
     if (activePurchaseId === null) return null
     return products.find(item => item.id === activePurchaseId) ?? null
@@ -1182,10 +1232,12 @@ export default function ProductsPage() {
       setActiveNameFilterId(null)
       setSelectedCategory('all')
       setSearchTerm('')
+      setCatalogPage(1)
       return
     }
     setSelectedCategory('all')
     setSearchTerm('')
+    setCatalogPage(1)
     setActiveNameFilterId(previous => (previous === filter.id ? null : filter.id))
   }
 
@@ -1193,6 +1245,7 @@ export default function ProductsPage() {
     setSelectedCategory(category)
     setActiveNameFilterId(null)
     setSearchTerm('')
+    setCatalogPage(1)
   }
 
   const totalTrendOrders = useMemo(
@@ -1204,6 +1257,7 @@ export default function ProductsPage() {
     setSelectedCategory('all')
     setActiveNameFilterId(null)
     setSearchTerm(product.name)
+    setCatalogPage(1)
     window.setTimeout(() => {
       const target = document.getElementById(`catalog-product-${product.id}`)
       if (target) {
@@ -1406,7 +1460,10 @@ export default function ProductsPage() {
             <input
               type='search'
               value={searchTerm}
-              onChange={event => setSearchTerm(event.target.value)}
+              onChange={event => {
+                setSearchTerm(event.target.value)
+                setCatalogPage(1)
+              }}
               placeholder='Busca un producto...'
               aria-label='Buscar productos'
             />
@@ -1462,7 +1519,7 @@ export default function ProductsPage() {
         )}
 
         <section className={styles.grid}>
-          {filteredProducts.map(item => {
+          {paginatedProducts.map(item => {
             const displayPrice = canPurchase ? item.priceAffiliate : item.priceGuest
             const isOpen = activePurchaseId === item.id
             const isBuying = buyingProductId === item.id
@@ -1617,6 +1674,41 @@ export default function ProductsPage() {
             </article>
           )}
         </section>
+
+        {filteredProducts.length > 0 && catalogTotalPages > 1 && (
+          <nav className={styles.catalogPagination} aria-label='Paginacion de productos'>
+            <button
+              type='button'
+              className={styles.catalogPageButton}
+              disabled={activeCatalogPage <= 1}
+              onClick={() => setCatalogPage(previous => Math.max(1, previous - 1))}
+            >
+              Anterior
+            </button>
+            <div className={styles.catalogPageNumbers}>
+              {catalogPageNumbers.map(pageNumber => (
+                <button
+                  key={`catalog-page-${pageNumber}`}
+                  type='button'
+                  className={`${styles.catalogPageButton} ${
+                    pageNumber === activeCatalogPage ? styles.catalogPageButtonActive : ''
+                  }`}
+                  onClick={() => setCatalogPage(pageNumber)}
+                >
+                  {pageNumber}
+                </button>
+              ))}
+            </div>
+            <button
+              type='button'
+              className={styles.catalogPageButton}
+              disabled={activeCatalogPage >= catalogTotalPages}
+              onClick={() => setCatalogPage(previous => Math.min(catalogTotalPages, previous + 1))}
+            >
+              Siguiente
+            </button>
+          </nav>
+        )}
 
         {activePurchaseProduct && canPurchase && !activePurchaseProduct.isDemo && (
           <div className={styles.purchaseModalBackdrop} role='presentation'>
