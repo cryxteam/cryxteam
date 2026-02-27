@@ -7632,8 +7632,10 @@
   }
 
   .providerCreateModalBackdrop {
-    display: block;
-    padding: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 12px 10px;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
@@ -7647,15 +7649,15 @@
   }
 
   .providerCreateModalCard {
-    width: min(100%, calc(100vw - 8px));
-    max-height: none;
-    overflow: visible;
+    width: min(94vw, 640px);
+    max-height: min(90dvh, calc(100dvh - 24px));
+    overflow: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
-    border-radius: 14px;
+    border-radius: 16px;
     padding: 10px;
-    margin: 0 auto;
+    margin: 0 auto 10px;
   }
 
   .providerCreateBlock {
