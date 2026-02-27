@@ -1520,8 +1520,8 @@ export default function ProductsPage() {
                       <Image
                         src={item.providerAvatarUrl}
                         alt={item.providerName}
-                        width={24}
-                        height={24}
+                        width={34}
+                        height={34}
                         className={styles.cardProviderAvatarImage}
                         draggable={false}
                         onContextMenu={event => event.preventDefault()}
@@ -1546,9 +1546,11 @@ export default function ProductsPage() {
                 <p className={styles.cardMeta}>
                   <span className={styles.profileInfoIcon} title='Info del producto'>
                     i
-                  </span>{' '}
-                  {formatAccountType(item.accountType)} | {formatDeliveryMode(item.deliveryMode)} |{' '}
-                  {formatRenewable(item.renewable)} | {formatDuration(item.durationDays)}
+                  </span>
+                  <span className={styles.cardMetaText}>
+                    {formatAccountType(item.accountType)} | {formatDeliveryMode(item.deliveryMode)} |{' '}
+                    {formatRenewable(item.renewable)} | {formatDuration(item.durationDays)}
+                  </span>
                 </p>
 
                 <div className={styles.cardPriceRow}>

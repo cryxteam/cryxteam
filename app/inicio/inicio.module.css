@@ -785,21 +785,26 @@
 .productProviderRow {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  margin-top: 0;
 }
 
 .productProviderAvatar {
-  width: 24px;
-  height: 24px;
+  width: 34px;
+  height: 34px;
   border-radius: 999px;
-  border: 1px solid rgba(147, 197, 253, 0.45);
+  border: 1px solid rgba(147, 197, 253, 0.75);
   background: linear-gradient(135deg, #1d4ed8, #7c3aed);
   color: #f8fafc;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 900;
   display: grid;
   place-items: center;
   overflow: hidden;
+  box-shadow:
+    0 0 0 2px rgba(15, 23, 42, 0.9),
+    0 0 16px rgba(139, 92, 246, 0.34);
+  flex: 0 0 auto;
 }
 
 .productProviderAvatarImage {
@@ -811,13 +816,14 @@
 
 .productProviderName {
   color: #22d3ee;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
+  line-height: 1;
 }
 
 .productProviderCheck {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
   background: #2563eb;
   color: #ffffff;
@@ -848,9 +854,9 @@
 }
 
 .productTitle {
-  margin: 0;
+  margin: 1px 0 0;
   font-size: 1.02rem;
-  line-height: 1.15;
+  line-height: 1.1;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -858,7 +864,13 @@
 }
 
 .productTitleIcon {
-  flex: 0 0 auto;
+  flex: 0 0 1.1rem;
+  width: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 .productTitleTickerMask {
@@ -892,14 +904,23 @@
   }
 }
 
-.productCard p {
-  margin: 0;
+.productMetaLine {
+  margin: 1px 0 0;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 5px;
   color: #94a3b8;
   font-size: 0.76rem;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.productMetaText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .productMeta {

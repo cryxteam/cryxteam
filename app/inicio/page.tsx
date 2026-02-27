@@ -596,8 +596,8 @@ export default function InicioPage() {
                         <Image
                           src={item.providerAvatarUrl}
                           alt={item.providerName}
-                          width={24}
-                          height={24}
+                          width={34}
+                          height={34}
                           className={styles.productProviderAvatarImage}
                           draggable={false}
                           onContextMenu={event => event.preventDefault()}
@@ -619,12 +619,14 @@ export default function InicioPage() {
                       </span>
                     </span>
                   </h4>
-                  <p>
+                  <p className={styles.productMetaLine}>
                     <span className={styles.profileInfoIcon} title='Info del producto'>
                       i
-                    </span>{' '}
-                    {formatAccountType(item.accountType)} | {formatDeliveryMode(item.deliveryMode)} |{' '}
-                    {formatRenewable(item.renewable)} | {formatDuration(item.durationDays)}
+                    </span>
+                    <span className={styles.productMetaText}>
+                      {formatAccountType(item.accountType)} | {formatDeliveryMode(item.deliveryMode)} |{' '}
+                      {formatRenewable(item.renewable)} | {formatDuration(item.durationDays)}
+                    </span>
                   </p>
                   <div className={styles.productMeta}>
                     <strong className={styles.productPriceChip}>{formatPrice(price)}</strong>
