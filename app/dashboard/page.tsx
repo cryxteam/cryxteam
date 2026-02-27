@@ -11228,7 +11228,11 @@ export default function UserDashboardPage() {
       )}
 
       <section className={styles.shell}>
-        <aside className={`${styles.sidebar} ${menuOpen ? styles.sidebarOpen : ''}`}>
+        <aside
+          className={`${styles.sidebar} ${menuOpen ? styles.sidebarOpen : ''} ${
+            isBlockingOverlayOpen ? styles.sidebarSuppressed : ''
+          }`}
+        >
           <p className={styles.sidebarKicker}>Panel de usuario</p>
           <h1 className={styles.sidebarTitle}>Dashboard</h1>
 
