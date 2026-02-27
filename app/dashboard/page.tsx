@@ -11110,8 +11110,8 @@ export default function UserDashboardPage() {
 
                               return (
                                 <tr key={order.id}>
-                                  <td>{index + 1}</td>
-                                  <td>
+                                  <td data-label='#'>{index + 1}</td>
+                                  <td data-label='ID'>
                                     <button
                                       type='button'
                                       className={styles.userCellButton}
@@ -11121,7 +11121,7 @@ export default function UserDashboardPage() {
                                       Copiar
                                     </button>
                                   </td>
-                                  <td>
+                                  <td data-label='PRODUCTO'>
                                     <div className={styles.userProductCellMain}>
                                       <strong>{order.productName}</strong>
                                       <span>{deliveredLabel}</span>
@@ -11134,8 +11134,8 @@ export default function UserDashboardPage() {
                                       </button>
                                     </div>
                                   </td>
-                                  <td>{usernameValue}</td>
-                                  <td>
+                                  <td data-label='CORREO'>{usernameValue}</td>
+                                  <td data-label='CONTRASEÑA'>
                                     <div className={styles.userPasswordCell}>
                                       <span>{passwordValue}</span>
                                       {credentialInfo.passwordValue !== '-' && (
@@ -11149,9 +11149,9 @@ export default function UserDashboardPage() {
                                       )}
                                     </div>
                                   </td>
-                                  <td>{profileNumberValue}</td>
-                                  <td>{pinValue}</td>
-                                  <td>
+                                  <td data-label='N° PERFIL'>{profileNumberValue}</td>
+                                  <td data-label='PIN'>{pinValue}</td>
+                                  <td data-label='CLIENTE'>
                                     <div className={styles.userCellStack}>
                                       <div className={styles.userInlineValueWithEdit}>
                                         <span>{order.customerName || '-'}</span>
@@ -11194,7 +11194,7 @@ export default function UserDashboardPage() {
                                       )}
                                     </div>
                                   </td>
-                                  <td>
+                                  <td data-label='PROVEEDOR'>
                                     <div className={styles.userCellStack}>
                                       <span>{order.providerName}</span>
                                       {providerWhatsappLink ? (
@@ -11215,7 +11215,7 @@ export default function UserDashboardPage() {
                                       )}
                                     </div>
                                   </td>
-                                  <td>
+                                  <td data-label='CELULAR'>
                                     <div className={styles.userInlineValueWithEdit}>
                                       <span>{order.customerPhone || '-'}</span>
                                       <button
@@ -11229,9 +11229,9 @@ export default function UserDashboardPage() {
                                       </button>
                                     </div>
                                   </td>
-                                  <td>{startDateLabel}</td>
-                                  <td>{endDateLabel}</td>
-                                  <td>
+                                  <td data-label='INICIO'>{startDateLabel}</td>
+                                  <td data-label='FIN'>{endDateLabel}</td>
+                                  <td data-label='DÍAS'>
                                     {expiryReminderLink && computedDaysLeft !== null ? (
                                       <a
                                         href={expiryReminderLink}

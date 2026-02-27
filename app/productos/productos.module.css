@@ -937,6 +937,10 @@
   gap: 14px;
 }
 
+.grid > * {
+  min-width: 0;
+}
+
 .card {
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.28);
@@ -1621,11 +1625,11 @@
   }
 
   .trendingGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .topProductsRow {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .searchSection h2 {
@@ -1633,7 +1637,163 @@
   }
 
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .card {
+    min-width: 0;
+    padding: 7px;
+    gap: 6px;
+    border-radius: 12px;
+  }
+
+  .cardMedia {
+    border-radius: 10px;
+    aspect-ratio: 16 / 11.5;
+  }
+
+  .cardRenewBadge {
+    right: 6px;
+    top: 6px;
+    font-size: 9px;
+    padding: 4px 7px;
+  }
+
+  .cardStockPill {
+    bottom: 6px;
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+
+  .cardProviderRow {
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .cardProviderAvatar {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .cardProviderName {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+  }
+
+  .cardProviderCheck {
+    width: 14px;
+    height: 14px;
+    font-size: 9px;
+    flex: 0 0 auto;
+  }
+
+  .cardTitle {
+    margin-top: 0;
+    font-size: 0.92rem;
+    gap: 5px;
+    line-height: 1.15;
+    align-items: flex-start;
+  }
+
+  .cardTitleIcon {
+    flex: 0 0 0.95rem;
+    width: 0.95rem;
+    font-size: 0.82rem;
+    padding-top: 1px;
+  }
+
+  .cardTitleTickerMask {
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .cardTitleTickerTrack {
+    display: block;
+    padding-left: 0;
+    animation: none;
+  }
+
+  .cardTitleTickerItem {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: normal;
+    text-overflow: ellipsis;
+    word-break: break-word;
+  }
+
+  .cardMeta {
+    margin-top: 0;
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr);
+    align-items: start;
+    gap: 4px;
+    white-space: normal;
+    font-size: 11px;
+  }
+
+  .cardMetaText {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: normal;
+  }
+
+  .profileInfoIcon {
+    width: 14px;
+    height: 14px;
+    font-size: 9px;
+    margin-top: 1px;
+  }
+
+  .cardPriceRow {
+    gap: 6px;
+    align-items: center;
+  }
+
+  .priceChip {
+    font-size: 0.86rem;
+    padding: 4px 8px;
+  }
+
+  .priceHint {
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
+  .renewalTag {
+    font-size: 0.7rem;
+    gap: 6px;
+  }
+
+  .renewalTag::before {
+    width: 6px;
+    height: 6px;
+  }
+
+  .buyArea {
+    gap: 6px;
+  }
+
+  .buyButton {
+    border-radius: 10px;
+    min-height: 40px;
+    padding: 8px 9px;
+    font-size: 0.82rem;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  .buyLink {
+    font-size: 11px;
   }
 }
 

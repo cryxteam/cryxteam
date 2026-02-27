@@ -7581,6 +7581,25 @@
     width: min(100%, calc(100vw - 16px));
   }
 
+  .providerCreateModalCard {
+    max-height: calc(100vh - 20px);
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .providerCreateBlock {
+    gap: 10px;
+  }
+
+  .providerCreateModalCard .providerActionRow {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: 2px;
+    padding-top: 8px;
+    background: linear-gradient(180deg, rgba(12, 10, 28, 0), rgba(12, 10, 28, 0.95) 42%);
+  }
+
   .providerCatalogToolbar {
     grid-template-columns: 1fr;
   }
@@ -7832,6 +7851,102 @@
 
   .adGrid {
     grid-template-columns: 1fr;
+  }
+
+  .userProductsTableWrap {
+    overflow: visible;
+    border-radius: 14px;
+    padding: 10px;
+  }
+
+  .userProductsTable {
+    min-width: 0;
+    display: block;
+  }
+
+  .userProductsTable thead {
+    display: none;
+  }
+
+  .userProductsTable tbody {
+    display: grid;
+    gap: 10px;
+  }
+
+  .userProductsTable tbody tr {
+    display: block;
+    border: 1px solid rgba(167, 139, 250, 0.28);
+    border-radius: 12px;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.1), transparent 46%),
+      linear-gradient(180deg, rgba(20, 13, 37, 0.9), rgba(8, 11, 28, 0.92));
+    padding: 10px 10px 8px;
+  }
+
+  .userProductsTable tbody td {
+    display: grid;
+    grid-template-columns: minmax(84px, auto) minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px dashed rgba(148, 163, 184, 0.2);
+    font-size: 0.8rem;
+  }
+
+  .userProductsTable tbody td:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .userProductsTable tbody td::before {
+    content: attr(data-label);
+    color: #a5b4fc;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    padding-top: 2px;
+  }
+
+  .userProductsTable tbody td[data-label='#']::before {
+    content: '#';
+  }
+
+  .userProductsTable tbody td[data-label='#'] {
+    grid-template-columns: auto 1fr;
+  }
+
+  .userProductCellMain,
+  .userCellStack {
+    justify-items: start;
+  }
+
+  .userInlineValueWithEdit {
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .userCellActionsRow {
+    flex-wrap: wrap;
+  }
+
+  .userPasswordCell {
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .userIconLink,
+  .userIconOff {
+    width: 32px;
+    height: 32px;
+  }
+
+  .userDaysBubble {
+    width: 32px;
+    height: 32px;
+    font-size: 0.72rem;
   }
 
   .rechargeHero {
