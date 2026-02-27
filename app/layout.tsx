@@ -1,7 +1,7 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'Streaming Admin',
+  title: 'CryxTeam',
   description: 'Administra plataformas de streaming',
 }
 

@@ -346,6 +346,27 @@
   cursor: not-allowed;
 }
 
+.turnstileWrap {
+  margin: 8px 0 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.turnstileBox {
+  min-height: 66px;
+  border-radius: 14px;
+  border: 1px solid rgba(99, 102, 241, 0.26);
+  background: rgba(2, 6, 23, 0.5);
+  padding: 6px;
+  overflow: hidden;
+}
+
+.turnstileHint {
+  margin: 0;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
 .message {
   margin-top: 12px;
   border-radius: 12px;
