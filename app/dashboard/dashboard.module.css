@@ -1048,8 +1048,21 @@
 .supportMaintenanceBackdrop,
 .userOrderEditBackdrop,
 .userSupportTicketBackdrop {
-  overflow: hidden;
   overscroll-behavior: contain;
+}
+
+.providerCreateModalBackdrop,
+.providerOrderModalBackdrop,
+.providerBuyerModalBackdrop,
+.providerInventoryModalBackdrop,
+.providerProfilesModalBackdrop,
+.affiliationModalBackdrop,
+.supportMaintenanceBackdrop,
+.userOrderEditBackdrop,
+.userSupportTicketBackdrop {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .ownerModalCard {
@@ -1625,6 +1638,8 @@
   max-height: calc(100vh - 34px);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   box-shadow:
     0 26px 54px rgba(2, 6, 23, 0.62),
     0 0 0 1px rgba(167, 139, 250, 0.2);
@@ -3090,6 +3105,18 @@
 .providerInventoryInlineActions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.providerInventoryEditButton {
+  border-color: rgba(103, 232, 249, 0.5);
+  background: rgba(8, 47, 73, 0.48);
+  color: #bae6fd;
+}
+
+.providerInventoryDeleteButton {
+  border-color: rgba(251, 113, 133, 0.56);
+  background: rgba(127, 29, 29, 0.42);
+  color: #fecdd3;
 }
 
 .providerInventoryQuickActions button {
@@ -7602,6 +7629,9 @@
   .providerCreateModalBackdrop {
     place-items: end center;
     padding: 8px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
 
   .providerCreateModalCard,
@@ -7617,6 +7647,7 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     border-radius: 14px;
     padding: 10px;
   }

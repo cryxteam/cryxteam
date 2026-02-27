@@ -322,6 +322,13 @@ type ProviderInventoryFormState = {
   slotLabelPrefix: string
 }
 
+type ProviderInventoryEditFormState = {
+  loginUser: string
+  loginPassword: string
+  slotLabel: string
+  profilePin: string
+}
+
 type ProviderInventoryProfileInput = {
   slotLabel: string
   profilePin: string
@@ -619,6 +626,13 @@ const PROVIDER_INVENTORY_FORM_DEFAULT: ProviderInventoryFormState = {
   slotCapacity: '5',
   profilePin: '',
   slotLabelPrefix: 'Perfil',
+}
+
+const PROVIDER_INVENTORY_EDIT_FORM_DEFAULT: ProviderInventoryEditFormState = {
+  loginUser: '',
+  loginPassword: '',
+  slotLabel: '',
+  profilePin: '',
 }
 
 const OWNER_OVERVIEW_DEFAULT: OwnerOverview = {
@@ -1584,6 +1598,12 @@ export default function UserDashboardPage() {
   const [providerInventoryVisiblePasswords, setProviderInventoryVisiblePasswords] = useState<Record<string, boolean>>({})
   const [providerInventoryDaysDraft, setProviderInventoryDaysDraft] = useState<Record<string, string>>({})
   const [providerInventoryDaysEditingId, setProviderInventoryDaysEditingId] = useState<string | null>(null)
+  const [providerInventoryEditingAccountId, setProviderInventoryEditingAccountId] = useState<string | null>(null)
+  const [providerInventoryEditForm, setProviderInventoryEditForm] = useState<ProviderInventoryEditFormState>(
+    PROVIDER_INVENTORY_EDIT_FORM_DEFAULT
+  )
+  const [isProviderInventoryEditingSaving, setIsProviderInventoryEditingSaving] = useState(false)
+  const [isProviderInventoryDeleting, setIsProviderInventoryDeleting] = useState<Record<string, boolean>>({})
   const [providerBuyerModal, setProviderBuyerModal] = useState<ProviderBuyerModalState | null>(null)
   const [providerProductForm, setProviderProductForm] = useState<ProviderFormState>(PROVIDER_FORM_DEFAULT)
   const [providerOrderDrafts, setProviderOrderDrafts] = useState<Record<string, ProviderOrderDraft>>({})
@@ -3090,6 +3110,7 @@ export default function UserDashboardPage() {
     showProviderProfilesModal ||
     showProviderInventoryModal ||
     showProviderInventoryProfilesModal ||
+    providerInventoryEditingAccountId !== null ||
     providerSelectedOrderId !== null ||
     providerSelectedTicketId !== null ||
     providerBuyerModal !== null ||
@@ -3971,6 +3992,11 @@ export default function UserDashboardPage() {
     return filteredProviderInventoryAccounts.slice(start, start + PROVIDER_INVENTORY_PAGE_SIZE)
   }, [filteredProviderInventoryAccounts, providerInventoryCurrentPage])
 
+  const providerInventoryEditingAccount = useMemo(() => {
+    if (!providerInventoryEditingAccountId) return null
+    return providerInventoryAccounts.find(account => account.id === providerInventoryEditingAccountId) ?? null
+  }, [providerInventoryAccounts, providerInventoryEditingAccountId])
+
   function resetProviderInventoryForm(product: ProviderProduct | null = selectedProviderProduct) {
     setProviderInventoryForm({
       ...PROVIDER_INVENTORY_FORM_DEFAULT,
@@ -3978,6 +4004,28 @@ export default function UserDashboardPage() {
     })
     setProviderInventoryProfileInputs(buildInventoryProfileInputs(product?.profilesPerAccount ?? 5))
     setShowProviderInventoryProfilesModal(false)
+  }
+
+  function closeProviderInventoryEditModal() {
+    setProviderInventoryEditingAccountId(null)
+    setProviderInventoryEditForm(PROVIDER_INVENTORY_EDIT_FORM_DEFAULT)
+    setIsProviderInventoryEditingSaving(false)
+  }
+
+  function openProviderInventoryEditModal(account: ProviderInventoryAccount) {
+    const sortedSlots = [...account.slots].sort((a, b) => a.slotIndex - b.slotIndex)
+    const firstSlot = sortedSlots[0]
+    const isProfilesInventoryProduct = Boolean(
+      selectedProviderProduct && isProfilesAccountType(selectedProviderProduct.accountType)
+    )
+
+    setProviderInventoryEditForm({
+      loginUser: isProfilesInventoryProduct ? stripInventoryProfileSuffix(account.loginUser) : account.loginUser,
+      loginPassword: account.loginPassword || '',
+      slotLabel: firstSlot?.slotLabel || '',
+      profilePin: firstSlot?.profilePin || '',
+    })
+    setProviderInventoryEditingAccountId(account.id)
   }
 
   const loadProviderProductInventory = useCallback(
@@ -4787,6 +4835,204 @@ export default function UserDashboardPage() {
         ? 'Cuenta marcada como vencida. Ya puedes liberarla.'
         : `Vencimiento actualizado. Ahora quedan ${parsedValue} dias.`
     )
+  }
+
+  async function handleProviderInventoryEditSave() {
+    if (!selectedProviderProduct || !providerInventoryEditingAccount) return
+    if (!isOwner && !userId) {
+      setProviderInventoryMsgType('error')
+      setProviderInventoryMsg('Sesion invalida para editar inventario.')
+      return
+    }
+
+    const isProfilesInventoryProduct = isProfilesAccountType(selectedProviderProduct.accountType)
+    const nextLoginUserRaw = providerInventoryEditForm.loginUser.trim()
+    const nextLoginPassword = providerInventoryEditForm.loginPassword.trim()
+    const nextSlotLabel = providerInventoryEditForm.slotLabel.trim()
+    const nextProfilePin = providerInventoryEditForm.profilePin.trim()
+
+    if (!nextLoginUserRaw) {
+      setProviderInventoryMsgType('error')
+      setProviderInventoryMsg('Ingresa el usuario/login para guardar cambios.')
+      return
+    }
+    if (!nextLoginPassword) {
+      setProviderInventoryMsgType('error')
+      setProviderInventoryMsg('Ingresa la contraseña para guardar cambios.')
+      return
+    }
+    if (isProfilesInventoryProduct && !nextSlotLabel) {
+      setProviderInventoryMsgType('error')
+      setProviderInventoryMsg('Para perfiles debes indicar nombre/numero de perfil.')
+      return
+    }
+
+    const accountId = providerInventoryEditingAccount.id
+    const accountUpdatePayload: Record<string, unknown> = {
+      login_user: isProfilesInventoryProduct
+        ? composeInventoryProfileLogin(nextLoginUserRaw, nextSlotLabel || '1', providerInventoryEditingAccount.loginUser)
+        : nextLoginUserRaw,
+      login_password: nextLoginPassword,
+    }
+
+    setIsProviderInventoryEditingSaving(true)
+    setProviderInventoryMsg('')
+    setProviderInventoryMsgType('idle')
+
+    let accountUpdateQuery = supabase
+      .from('inventory_accounts')
+      .update(accountUpdatePayload)
+      .eq('id', accountId)
+      .eq('product_id', selectedProviderProduct.id)
+
+    if (!isOwner) {
+      accountUpdateQuery = accountUpdateQuery.eq('provider_id', userId as string)
+    } else if (selectedProviderProduct.providerId) {
+      accountUpdateQuery = accountUpdateQuery.eq('provider_id', selectedProviderProduct.providerId)
+    }
+
+    const { error: accountUpdateError } = await accountUpdateQuery
+    if (accountUpdateError) {
+      setIsProviderInventoryEditingSaving(false)
+      setProviderInventoryMsgType('error')
+      setProviderInventoryMsg(`No se pudo editar la cuenta. ${accountUpdateError.message}`)
+      return
+    }
+
+    if (isProfilesInventoryProduct) {
+      const sortedSlots = [...providerInventoryEditingAccount.slots].sort((a, b) => a.slotIndex - b.slotIndex)
+      const firstSlot = sortedSlots[0]
+      const slotPayload: Record<string, unknown> = {
+        slot_label: nextSlotLabel || null,
+        profile_pin: nextProfilePin || null,
+      }
+
+      if (firstSlot?.id) {
+        let slotUpdateQuery = supabase
+          .from('inventory_slots')
+          .update(slotPayload)
+          .eq('id', firstSlot.id)
+          .eq('product_id', selectedProviderProduct.id)
+
+        if (!isOwner) {
+          slotUpdateQuery = slotUpdateQuery.eq('provider_id', userId as string)
+        } else if (selectedProviderProduct.providerId) {
+          slotUpdateQuery = slotUpdateQuery.eq('provider_id', selectedProviderProduct.providerId)
+        }
+
+        const { error: slotUpdateError } = await slotUpdateQuery
+        if (slotUpdateError) {
+          setIsProviderInventoryEditingSaving(false)
+          setProviderInventoryMsgType('error')
+          setProviderInventoryMsg(`No se pudo editar perfil/PIN. ${slotUpdateError.message}`)
+          return
+        }
+      } else {
+        const insertPayload = {
+          inventory_account_id: accountId,
+          product_id: selectedProviderProduct.id,
+          provider_id: selectedProviderProduct.providerId || (userId as string),
+          slot_index: 1,
+          slot_label: nextSlotLabel || '1',
+          profile_pin: nextProfilePin || null,
+          status: 'free',
+        }
+        const { error: insertSlotError } = await supabase.from('inventory_slots').insert(insertPayload)
+        if (insertSlotError) {
+          setIsProviderInventoryEditingSaving(false)
+          setProviderInventoryMsgType('error')
+          setProviderInventoryMsg(`No se pudo crear perfil/PIN. ${insertSlotError.message}`)
+          return
+        }
+      }
+    }
+
+    await loadProviderProductInventory(selectedProviderProduct)
+    await loadProviderDashboardData()
+    closeProviderInventoryEditModal()
+    setProviderInventoryMsgType('ok')
+    setProviderInventoryMsg('Cuenta/perfil actualizado correctamente.')
+  }
+
+  async function handleProviderInventoryDeleteAccount(account: ProviderInventoryAccount) {
+    if (!selectedProviderProduct) return
+    if (!isOwner && !userId) {
+      setProviderInventoryMsgType('error')
+      setProviderInventoryMsg('Sesion invalida para borrar inventario.')
+      return
+    }
+
+    const hasBuyer = account.buyerId.trim().length > 0 || account.buyerName.trim().length > 0
+    const hasSlotAssignment = account.slots.some(slot => {
+      const status = slot.status.trim().toLowerCase()
+      return (
+        slot.buyerId.trim().length > 0 ||
+        ['occupied', 'ocupado', 'delivered', 'entregado', 'reserved', 'reservado', 'used', 'taken', 'asignado'].includes(
+          status
+        )
+      )
+    })
+
+    if (hasBuyer || hasSlotAssignment || Boolean(account.orderId)) {
+      setProviderInventoryMsgType('error')
+      setProviderInventoryMsg('No puedes borrar una cuenta vinculada a compra activa. Primero liberala/vencela.')
+      return
+    }
+
+    const deletingKey = account.id
+    setIsProviderInventoryDeleting(previous => ({ ...previous, [deletingKey]: true }))
+    setProviderInventoryMsg('')
+    setProviderInventoryMsgType('idle')
+
+    let slotsDeleteQuery = supabase
+      .from('inventory_slots')
+      .delete()
+      .eq('inventory_account_id', account.id)
+      .eq('product_id', selectedProviderProduct.id)
+
+    if (!isOwner) {
+      slotsDeleteQuery = slotsDeleteQuery.eq('provider_id', userId as string)
+    } else if (selectedProviderProduct.providerId) {
+      slotsDeleteQuery = slotsDeleteQuery.eq('provider_id', selectedProviderProduct.providerId)
+    }
+
+    const { error: deleteSlotsError } = await slotsDeleteQuery
+    if (deleteSlotsError && !isLikelySchemaError(deleteSlotsError.message)) {
+      setIsProviderInventoryDeleting(previous => ({ ...previous, [deletingKey]: false }))
+      setProviderInventoryMsgType('error')
+      setProviderInventoryMsg(`No se pudo borrar perfiles vinculados. ${deleteSlotsError.message}`)
+      return
+    }
+
+    let accountDeleteQuery = supabase
+      .from('inventory_accounts')
+      .delete()
+      .eq('id', account.id)
+      .eq('product_id', selectedProviderProduct.id)
+
+    if (!isOwner) {
+      accountDeleteQuery = accountDeleteQuery.eq('provider_id', userId as string)
+    } else if (selectedProviderProduct.providerId) {
+      accountDeleteQuery = accountDeleteQuery.eq('provider_id', selectedProviderProduct.providerId)
+    }
+
+    const { error: deleteAccountError } = await accountDeleteQuery
+    setIsProviderInventoryDeleting(previous => ({ ...previous, [deletingKey]: false }))
+
+    if (deleteAccountError) {
+      setProviderInventoryMsgType('error')
+      setProviderInventoryMsg(`No se pudo borrar la cuenta. ${deleteAccountError.message}`)
+      return
+    }
+
+    await syncProviderProductStock(selectedProviderProduct)
+    await loadProviderProductInventory(selectedProviderProduct)
+    await loadProviderDashboardData()
+    if (providerInventoryEditingAccountId === account.id) {
+      closeProviderInventoryEditModal()
+    }
+    setProviderInventoryMsgType('ok')
+    setProviderInventoryMsg('Cuenta/perfil eliminado correctamente.')
   }
 
   async function handleProviderProductSubmit() {
@@ -7161,6 +7407,14 @@ export default function UserDashboardPage() {
   }, [providerSelectedTicketId, providerTicketsLive])
 
   useEffect(() => {
+    if (!providerInventoryEditingAccountId) return
+    const exists = providerInventoryAccounts.some(account => account.id === providerInventoryEditingAccountId)
+    if (!exists) {
+      closeProviderInventoryEditModal()
+    }
+  }, [providerInventoryAccounts, providerInventoryEditingAccountId])
+
+  useEffect(() => {
     setProviderProductsPage(1)
   }, [providerProductSearch])
 
@@ -7205,6 +7459,10 @@ export default function UserDashboardPage() {
     setProviderInventoryVisiblePasswords({})
     setProviderInventoryDaysDraft({})
     setProviderInventoryDaysEditingId(null)
+    setProviderInventoryEditingAccountId(null)
+    setProviderInventoryEditForm(PROVIDER_INVENTORY_EDIT_FORM_DEFAULT)
+    setIsProviderInventoryEditingSaving(false)
+    setIsProviderInventoryDeleting({})
     setShowProviderInventoryModal(false)
     setShowProviderInventoryProfilesModal(false)
     setProviderInventoryPage(1)
@@ -7219,6 +7477,10 @@ export default function UserDashboardPage() {
     setProviderInventoryAccounts([])
     setProviderInventoryDaysDraft({})
     setProviderInventoryDaysEditingId(null)
+    setProviderInventoryEditingAccountId(null)
+    setProviderInventoryEditForm(PROVIDER_INVENTORY_EDIT_FORM_DEFAULT)
+    setIsProviderInventoryEditingSaving(false)
+    setIsProviderInventoryDeleting({})
     setShowProviderInventoryModal(false)
   }, [providerProducts, selectedProviderProductId])
 
@@ -8630,6 +8892,21 @@ export default function UserDashboardPage() {
                                   <button type='button' onClick={() => void copyProviderInventoryCredentials(account)}>
                                     Copiar todo
                                   </button>
+                                  <button
+                                    type='button'
+                                    className={styles.providerInventoryEditButton}
+                                    onClick={() => openProviderInventoryEditModal(account)}
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    type='button'
+                                    className={styles.providerInventoryDeleteButton}
+                                    onClick={() => void handleProviderInventoryDeleteAccount(account)}
+                                    disabled={Boolean(isProviderInventoryDeleting[account.id])}
+                                  >
+                                    {isProviderInventoryDeleting[account.id] ? 'Borrando...' : 'Borrar'}
+                                  </button>
                                   {!isOnDemandMode(selectedProviderProduct.deliveryMode) && (
                                     <button
                                       type='button'
@@ -9449,6 +9726,98 @@ export default function UserDashboardPage() {
                     </section>
                   </div>
                 )}
+              {providerInventoryEditingAccount && selectedProviderProduct && (
+                <div className={styles.providerProfilesModalBackdrop} role='presentation'>
+                  <section
+                    className={styles.providerProfilesModalCard}
+                    role='dialog'
+                    aria-modal='true'
+                    aria-labelledby='provider-inventory-edit-title'
+                  >
+                    <h4 id='provider-inventory-edit-title'>✍️ Editar cuenta/perfil</h4>
+                    <p>Ajusta credenciales y datos del perfil para este registro.</p>
+
+                    <div className={styles.providerFormGrid}>
+                      <label className={styles.providerField}>
+                        <span>Usuario/Login</span>
+                        <input
+                          type='text'
+                          value={providerInventoryEditForm.loginUser}
+                          onChange={event =>
+                            setProviderInventoryEditForm(previous => ({
+                              ...previous,
+                              loginUser: event.target.value,
+                            }))
+                          }
+                          placeholder='correo@servicio.com'
+                        />
+                      </label>
+
+                      <label className={styles.providerField}>
+                        <span>Password</span>
+                        <input
+                          type='text'
+                          value={providerInventoryEditForm.loginPassword}
+                          onChange={event =>
+                            setProviderInventoryEditForm(previous => ({
+                              ...previous,
+                              loginPassword: event.target.value,
+                            }))
+                          }
+                          placeholder='Nueva contraseña'
+                        />
+                      </label>
+
+                      {isProfilesAccountType(selectedProviderProduct.accountType) && (
+                        <>
+                          <label className={styles.providerField}>
+                            <span>Perfil</span>
+                            <input
+                              type='text'
+                              value={providerInventoryEditForm.slotLabel}
+                              onChange={event =>
+                                setProviderInventoryEditForm(previous => ({
+                                  ...previous,
+                                  slotLabel: event.target.value,
+                                }))
+                              }
+                              placeholder='Ej: Perfil 1'
+                            />
+                          </label>
+
+                          <label className={styles.providerField}>
+                            <span>PIN</span>
+                            <input
+                              type='text'
+                              value={providerInventoryEditForm.profilePin}
+                              onChange={event =>
+                                setProviderInventoryEditForm(previous => ({
+                                  ...previous,
+                                  profilePin: event.target.value,
+                                }))
+                              }
+                              placeholder='Ej: 1234'
+                            />
+                          </label>
+                        </>
+                      )}
+                    </div>
+
+                    <div className={styles.providerProfilesModalActions}>
+                      <button type='button' onClick={closeProviderInventoryEditModal}>
+                        Cerrar
+                      </button>
+                      <button
+                        type='button'
+                        onClick={() => void handleProviderInventoryEditSave()}
+                        disabled={isProviderInventoryEditingSaving}
+                      >
+                        {isProviderInventoryEditingSaving ? 'Guardando...' : 'Guardar cambios'}
+                      </button>
+                    </div>
+                  </section>
+                </div>
+              )}
 
             </>
           )}
