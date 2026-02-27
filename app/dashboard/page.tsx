@@ -3081,6 +3081,21 @@ export default function UserDashboardPage() {
     menuItems.some(item => item.id === activeSection) && menuItems.length > 0
       ? activeSection
       : menuItems[0]?.id ?? 'mis-productos'
+  const isBlockingOverlayOpen =
+    menuOpen ||
+    showAffiliateNotFoundModal ||
+    showAffiliateRulesModal ||
+    showSupportMaintenanceModal ||
+    showProviderProductForm ||
+    showProviderProfilesModal ||
+    showProviderInventoryModal ||
+    showProviderInventoryProfilesModal ||
+    providerSelectedOrderId !== null ||
+    providerSelectedTicketId !== null ||
+    providerBuyerModal !== null ||
+    ownerDialogOpen ||
+    userSupportModal !== null ||
+    userOrderEditModal !== null
 
   const handleMenuSectionClick = useCallback((sectionId: DashboardSectionId) => {
     if (sectionId === 'codigo-soporte') {
@@ -3092,6 +3107,34 @@ export default function UserDashboardPage() {
     setActiveSection(sectionId)
     setMenuOpen(false)
   }, [])
+
+  useEffect(() => {
+    if (!isBlockingOverlayOpen) return
+
+    const body = document.body
+    const html = document.documentElement
+    const scrollY = window.scrollY
+    const previousBodyOverflow = body.style.overflow
+    const previousBodyPosition = body.style.position
+    const previousBodyTop = body.style.top
+    const previousBodyWidth = body.style.width
+    const previousHtmlOverflow = html.style.overflow
+
+    body.style.overflow = 'hidden'
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollY}px`
+    body.style.width = '100%'
+    html.style.overflow = 'hidden'
+
+    return () => {
+      body.style.overflow = previousBodyOverflow
+      body.style.position = previousBodyPosition
+      body.style.top = previousBodyTop
+      body.style.width = previousBodyWidth
+      html.style.overflow = previousHtmlOverflow
+      window.scrollTo(0, scrollY)
+    }
+  }, [isBlockingOverlayOpen])
 
   const providerPinExpected = toText(profile?.purchase_pin)
   const providerAvatarUrl = toText(profile?.provider_avatar_url)
@@ -8764,11 +8807,7 @@ export default function UserDashboardPage() {
                         const whatsappHref = clientPhone ? `https://wa.me/${clientPhone}?text=${whatsappText}` : ''
 
                         return (
-                          <div
-                            className={styles.providerOrderModalBackdrop}
-                            role='presentation'
-                            onClick={() => setProviderSelectedOrderId(null)}
-                          >
+                          <div className={styles.providerOrderModalBackdrop} role='presentation'>
                             <section
                               className={styles.providerOrderModalCard}
                               role='dialog'
@@ -8991,11 +9030,7 @@ export default function UserDashboardPage() {
                         const whatsappHref = clientPhone ? `https://wa.me/${clientPhone}?text=${whatsappText}` : ''
 
                         return (
-                          <div
-                            className={styles.providerOrderModalBackdrop}
-                            role='presentation'
-                            onClick={() => setProviderSelectedTicketId(null)}
-                          >
+                          <div className={styles.providerOrderModalBackdrop} role='presentation'>
                             <section
                               className={styles.providerOrderModalCard}
                               role='dialog'
