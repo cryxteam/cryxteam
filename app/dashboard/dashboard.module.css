@@ -4151,13 +4151,13 @@
 
 .affiliatesGrid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 10px;
   align-items: start;
 }
 
 .affiliatesScroll {
-  max-height: min(56vh, 560px);
+  max-height: min(44vh, 460px);
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;
@@ -7168,7 +7168,7 @@
   }
 
   .affiliatesGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
   }
 
   .affiliationLayout {
@@ -8359,7 +8359,7 @@
   }
 
   .affiliatesGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
