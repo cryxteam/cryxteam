@@ -3842,7 +3842,7 @@
 
 .affiliationHeroTop {
   display: grid;
-  grid-template-columns: minmax(330px, 440px) minmax(0, 1fr);
+  grid-template-columns: minmax(620px, 1fr) minmax(360px, 460px);
   gap: 18px;
   align-items: start;
 }
