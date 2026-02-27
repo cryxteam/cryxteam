@@ -196,11 +196,12 @@ export default function RegisterPage() {
       });
 
       const payload = (await response.json().catch(() => null)) as
-        | { success?: boolean }
+        | { success?: boolean; errors?: string[] }
         | null;
 
       if (!response.ok || !payload?.success) {
-        showError("No se pudo validar el captcha. Intenta de nuevo.");
+        const code = payload?.errors?.[0] ?? "turnstile-failed";
+        showError(`No se pudo validar el captcha (${code}). Intenta de nuevo.`);
         resetTurnstile();
         return false;
       }

@@ -6,7 +6,7 @@ type TurnstileVerifyResponse = {
 };
 
 export async function POST(request: NextRequest) {
-  const secret = process.env.TURNSTILE_SECRET_KEY;
+  const secret = process.env.TURNSTILE_SECRET_KEY?.trim();
 
   if (!secret) {
     return NextResponse.json(
