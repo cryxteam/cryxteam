@@ -473,6 +473,11 @@ function mapPurchaseError(rawMessage: string) {
   return `No se pudo completar la compra (${rawMessage}).`
 }
 
+function getDeterministicShuffleScore(id: number, seed: number) {
+  const value = Math.sin(id * 12.9898 + seed * 78.233) * 43758.5453
+  return value - Math.floor(value)
+}
+
 function normalizeProducts(
   rows: Record<string, unknown>[],
   providerById: Map<string, { name: string; avatarUrl: string }>
@@ -577,6 +582,7 @@ export default function ProductsPage() {
   const [catalogReloadSeq, setCatalogReloadSeq] = useState(0)
   const [trendOrdersByProduct, setTrendOrdersByProduct] = useState<Record<number, number>>({})
   const [viewerPaidProductIds, setViewerPaidProductIds] = useState<number[]>([])
+  const [allProductsShuffleSeed, setAllProductsShuffleSeed] = useState(1)
   const [catalogViewportWidth, setCatalogViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1280 : window.innerWidth
   )
@@ -1146,7 +1152,7 @@ export default function ProductsPage() {
   const filteredProducts = useMemo(() => {
     const search = searchTerm.trim().toLowerCase()
 
-    return sortedProducts.filter(item => {
+    const base = sortedProducts.filter(item => {
       const category = detectCategory(item.name)
       const categoryMatch = selectedCategory === 'all' || category === selectedCategory
       const nameFilterMatch =
@@ -1162,7 +1168,14 @@ export default function ProductsPage() {
 
       return categoryMatch && nameFilterMatch && searchMatch
     })
-  }, [sortedProducts, selectedCategory, searchTerm, activeNameFilter])
+
+    if (selectedCategory !== 'all') return base
+    return [...base].sort((left, right) => {
+      const leftScore = getDeterministicShuffleScore(left.id, allProductsShuffleSeed)
+      const rightScore = getDeterministicShuffleScore(right.id, allProductsShuffleSeed)
+      return leftScore - rightScore
+    })
+  }, [sortedProducts, selectedCategory, searchTerm, activeNameFilter, allProductsShuffleSeed])
 
   const catalogColumns = useMemo(() => {
     if (catalogViewportWidth <= 860) return 2
@@ -1242,6 +1255,9 @@ export default function ProductsPage() {
   }
 
   const applyCategoryFilter = (category: CategoryKey) => {
+    if (category === 'all') {
+      setAllProductsShuffleSeed(previous => ((previous + 7919) % 1000000) + 1)
+    }
     setSelectedCategory(category)
     setActiveNameFilterId(null)
     setSearchTerm('')

@@ -732,12 +732,12 @@ function DashboardMenuIcon({ id }: { id: DashboardSectionId }) {
   }
 }
 
-function sectionMeta(id: DashboardSectionId, username: string): DashboardSectionMeta {
+function sectionMeta(id: DashboardSectionId): DashboardSectionMeta {
   switch (id) {
     case 'mis-productos':
       return {
         title: 'Mis productos',
-        description: `Aqui veras compras, credenciales y tickets de ${username}.`,
+        description: '',
         emptyState: 'Todavia no tienes productos asignados.',
         ctaLabel: 'Ver catalogo',
         ctaHref: '/productos',
@@ -7802,7 +7802,7 @@ export default function UserDashboardPage() {
     setOwnerMsgType('idle')
   }, [currentSectionId, ownerMsg, ownerMsgType, showOwnerNotice])
 
-  const section = sectionMeta(currentSectionId, profile?.username ?? 'usuario')
+  const section = sectionMeta(currentSectionId)
   const accountLabel = profile ? profile.username : 'Ingresa'
   const isMyProductsSection = currentSectionId === 'mis-productos'
   const supportCodeRaw = toText(profile?.purchase_pin)
@@ -11592,7 +11592,7 @@ export default function UserDashboardPage() {
                     currentSectionId !== 'administrador-cuentas' && (
                     <>
                       <h2 className={styles.panelTitle}>{section.title}</h2>
-                      <p className={styles.panelDescription}>{section.description}</p>
+                      {section.description ? <p className={styles.panelDescription}>{section.description}</p> : null}
                     </>
                   )}
 
