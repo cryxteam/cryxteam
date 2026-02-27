@@ -53,7 +53,9 @@ declare global {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+  const turnstileSiteKey = (
+    process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "0x4AAAAAACi75ZwU7Wr-i6Qz"
+  ).trim();
 
   const WHATSAPP_LINK = "https://chat.whatsapp.com/DAq3BQwm4YgA2Ao1loPxFO";
   const AFFILIATE_NUMBER = "51929436705";
