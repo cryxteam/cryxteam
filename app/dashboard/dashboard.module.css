@@ -7632,9 +7632,7 @@
   }
 
   .providerCreateModalBackdrop {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    display: block;
     padding: 12px 10px;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -7650,14 +7648,14 @@
 
   .providerCreateModalCard {
     width: min(94vw, 640px);
-    max-height: min(90dvh, calc(100dvh - 24px));
-    overflow: auto;
+    max-height: none;
+    overflow: visible;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
     border-radius: 16px;
     padding: 10px;
-    margin: 0 auto 10px;
+    margin: 0 auto 16px;
   }
 
   .providerCreateBlock {
