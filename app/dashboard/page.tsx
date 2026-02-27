@@ -78,7 +78,6 @@ type DashboardSectionId =
   | 'proveedor'
   | 'administrador-cuentas'
   | 'administrador'
-  | 'suscripciones'
   | 'codigo-soporte'
   | 'comunidad'
 
@@ -498,7 +497,6 @@ const DASHBOARD_MENU_ITEMS: DashboardMenuItem[] = [
   { id: 'proveedor', label: 'Proveedor' },
   { id: 'administrador-cuentas', label: 'Owner' },
   { id: 'administrador', label: 'Administrador' },
-  { id: 'suscripciones', label: 'Suscripciones' },
   { id: 'codigo-soporte', label: 'Códigos auto' },
   { id: 'comunidad', label: 'Comunidad' },
 ]
@@ -702,13 +700,6 @@ function DashboardMenuIcon({ id }: { id: DashboardSectionId }) {
           <circle cx='17.2' cy='14.2' r='1.2' />
         </svg>
       )
-    case 'suscripciones':
-      return (
-        <svg viewBox='0 0 24 24' aria-hidden='true'>
-          <rect x='4' y='5' width='16' height='15' rx='2' />
-          <path d='M8 3v4M16 3v4M4 9h16M9 14l2 2 4-4' />
-        </svg>
-      )
     case 'codigo-soporte':
       return (
         <svg viewBox='0 0 24 24' aria-hidden='true'>
@@ -776,14 +767,6 @@ function sectionMeta(id: DashboardSectionId, username: string): DashboardSection
         description: 'Controla cuentas externas que administras fuera de tus compras del kiosko.',
         emptyState: 'Aun no tienes cuentas externas registradas.',
         ctaLabel: 'Ir a mis productos',
-        ctaHref: '/dashboard',
-      }
-    case 'suscripciones':
-      return {
-        title: 'Suscripciones',
-        description: 'Consulta renovaciones, vencimientos y estados.',
-        emptyState: 'No hay suscripciones registradas para mostrar.',
-        ctaLabel: 'Revisar suscripciones',
         ctaHref: '/dashboard',
       }
     case 'codigo-soporte':
@@ -7277,13 +7260,6 @@ export default function UserDashboardPage() {
   const supportCodeMasked = supportCodeRaw
     ? '\u2022'.repeat(Math.max(4, supportCodeRaw.length))
     : '----'
-  const renewableOrders = useMemo(
-    () =>
-      ownedProducts
-        .filter(order => order.renewableLabel.trim().toLowerCase() === 'renovable')
-        .slice(0, 6),
-    [ownedProducts]
-  )
   const affiliateSummary = useMemo(() => {
     const total = affiliateMembers.length
     const approved = affiliateMembers.filter(member => member.approved).length
@@ -10602,42 +10578,6 @@ export default function UserDashboardPage() {
       return (
         <>
           <h2 className={styles.adminComingTitleFloat}>PROXIMAMENTE...</h2>
-          <video
-            className={styles.adminComingVideoFree}
-            src='/administrador.mp4'
-            controls
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload='metadata'
-          />
-        </>
-      )
-    }
-
-    if (currentSectionId === 'suscripciones') {
-      return (
-        <>
-          <p className={styles.panelEmpty}>
-            Productos renovables detectados: <strong>{renewableOrders.length}</strong>
-          </p>
-
-          {renewableOrders.length === 0 ? (
-            <p className={styles.panelEmpty}>Todavia no hay suscripciones renovables en tus compras.</p>
-          ) : (
-            <div className={styles.simpleList}>
-              {renewableOrders.map(order => (
-                <article key={`renew-${order.id}`} className={styles.simpleItem}>
-                  <div>
-                    <strong>{order.productName}</strong>
-                    <p>Compra #{order.id}</p>
-                  </div>
-                  <span>{formatMoney(order.pricePaid)}</span>
-                </article>
-              ))}
-            </div>
-          )}
         </>
       )
     }

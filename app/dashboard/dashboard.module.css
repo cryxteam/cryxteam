@@ -5650,23 +5650,6 @@
   animation: adminComingTitlePulse 2.8s ease-in-out infinite;
 }
 
-.adminComingVideoFree {
-  width: min(1040px, 100%);
-  margin: 0 auto;
-  display: block;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  background: #080711;
-  box-shadow:
-    0 18px 34px rgba(2, 6, 23, 0.56),
-    0 0 30px rgba(168, 85, 247, 0.26);
-  animation: adminComingVideoDrift 5.4s ease-in-out infinite;
-}
-
-.adminComingVideoFree:hover {
-  filter: brightness(1.04);
-}
-
 .adGrid {
   margin-top: 12px;
   display: grid;
@@ -5703,16 +5686,6 @@
   font-size: 0.74rem;
   font-weight: 800;
   padding: 4px 8px;
-}
-
-@keyframes adminComingVideoDrift {
-  0%,
-  100% {
-    transform: translateY(0) scale(1);
-  }
-  50% {
-    transform: translateY(-4px) scale(1.004);
-  }
 }
 
 @keyframes adminComingTitlePulse {
@@ -7588,6 +7561,11 @@
     padding: 12px;
   }
 
+  .providerCreateModalBackdrop {
+    place-items: end center;
+    padding: 8px;
+  }
+
   .providerCreateModalCard,
   .providerProfilesModalCard,
   .providerInventoryModalCard,
@@ -7596,13 +7574,40 @@
   }
 
   .providerCreateModalCard {
-    max-height: calc(100vh - 20px);
+    width: min(100%, calc(100vw - 8px));
+    max-height: min(92dvh, calc(100dvh - 8px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     border-radius: 14px;
-    padding: 12px;
+    padding: 10px;
   }
 
   .providerCreateBlock {
     gap: 10px;
+  }
+
+  .providerCreateModalCard .providerFormGrid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .providerCreateModalCard .providerField input,
+  .providerCreateModalCard .providerField select,
+  .providerCreateModalCard .providerField textarea {
+    font-size: 16px;
+  }
+
+  .providerCreateModalCard .providerField textarea {
+    min-height: 92px;
+  }
+
+  .providerCreateModalCard .providerHeadActions {
+    width: 100%;
+  }
+
+  .providerCreateModalCard .providerHeadActions button {
+    flex: 1 1 auto;
   }
 
   .providerCreateModalCard .providerActionRow {
