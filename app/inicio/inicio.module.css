@@ -847,6 +847,51 @@
   line-height: 1.15;
 }
 
+.productTitle {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.15;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.productTitleIcon {
+  flex: 0 0 auto;
+}
+
+.productTitleTickerMask {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.productTitleTickerTrack {
+  display: inline-block;
+  white-space: nowrap;
+  padding-left: 100%;
+  animation: productTitleTickerMove 8s linear infinite;
+  will-change: transform;
+}
+
+.productTitleTickerItem {
+  display: inline-block;
+  padding-right: 0;
+  white-space: nowrap;
+}
+
+@keyframes productTitleTickerMove {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-100%);
+  }
+}
+
 .productCard p {
   margin: 0;
   display: flex;

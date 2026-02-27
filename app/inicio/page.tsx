@@ -611,8 +611,13 @@ export default function InicioPage() {
                     <span className={styles.productProviderCheck}>{'\u2714'}</span>
                   </div>
 
-                  <h4>
-                    {getAccountTypeIcon(item.accountType)} {item.name}
+                  <h4 className={styles.productTitle}>
+                    <span className={styles.productTitleIcon}>{getAccountTypeIcon(item.accountType)}</span>
+                    <span className={styles.productTitleTickerMask} title={item.name}>
+                      <span className={styles.productTitleTickerTrack}>
+                        <span className={styles.productTitleTickerItem}>{item.name}</span>
+                      </span>
+                    </span>
                   </h4>
                   <p>
                     <span className={styles.profileInfoIcon} title='Info del producto'>

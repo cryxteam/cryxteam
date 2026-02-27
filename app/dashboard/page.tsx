@@ -204,6 +204,13 @@ type ProviderTicket = {
   deliveryMode: string
   isOnDemandRequest: boolean
   orderId: string | null
+  orderAccountType: string
+  orderInventorySlotId: string | null
+  orderCredentialsRaw: unknown
+  credentialLoginUser: string
+  credentialLoginPassword: string
+  credentialProfileLabel: string
+  credentialProfilePin: string
   buyerId: string
   buyerName: string
   buyerPhone: string
@@ -251,6 +258,10 @@ type ProviderTicketDraft = {
   status: string
   resolutionSummary: string
   resolutionDetail: string
+  loginUser: string
+  loginPassword: string
+  profileLabel: string
+  profilePin: string
 }
 
 type ProviderFormState = {
@@ -1352,6 +1363,59 @@ function decodeProfileLabelFromInventoryLogin(loginRaw: string) {
 
 function stripInventoryProfileSuffix(loginRaw: string) {
   return loginRaw.replace(/::slot_[^:]+::[^:]+$/i, '').replace(/::perfil_.+$/i, '')
+}
+
+function extractInventoryProfileSuffix(loginRaw: string) {
+  const match = loginRaw.match(/::slot_[^:]+::([^:]+)$/i)
+  return match ? match[1] : ''
+}
+
+function composeInventoryProfileLogin(loginUserRaw: string, profileLabelRaw: string, currentLoginRaw: string) {
+  const loginBase = stripInventoryProfileSuffix(loginUserRaw).trim()
+  const profileLabel = profileLabelRaw.trim() || '1'
+  if (!loginBase) return ''
+  const currentSuffix = extractInventoryProfileSuffix(currentLoginRaw)
+  const suffix = currentSuffix || `manual_${Date.now()}`
+  return `${loginBase}::slot_${encodeProfileLabelForInventoryLogin(profileLabel)}::${suffix}`
+}
+
+function buildOrderCredentialPayload(
+  currentRaw: unknown,
+  next: {
+    loginUser: string
+    loginPassword: string
+    profileLabel: string
+    profilePin: string
+    isProfiles: boolean
+  }
+) {
+  const payload: Record<string, unknown> =
+    currentRaw && typeof currentRaw === 'object' && !Array.isArray(currentRaw)
+      ? { ...(currentRaw as Record<string, unknown>) }
+      : {}
+
+  const loginUser = next.loginUser.trim()
+  const loginPassword = next.loginPassword.trim()
+  const profileLabel = next.profileLabel.trim()
+  const profilePin = next.profilePin.trim()
+
+  payload.login_user = loginUser || null
+  payload.username = loginUser || null
+  payload.correo = loginUser || null
+
+  payload.login_password = loginPassword || null
+  payload.password = loginPassword || null
+  payload.clave = loginPassword || null
+
+  if (next.isProfiles) {
+    payload.profile = profileLabel || null
+    payload.perfil = profileLabel || null
+    payload.slot_label = profileLabel || null
+    payload.profile_pin = profilePin || null
+    payload.pin = profilePin || null
+  }
+
+  return payload
 }
 
 function readProfilesPerAccount(value: unknown) {
@@ -3389,6 +3453,10 @@ export default function UserDashboardPage() {
 
       const activeAccountsByProductId = new Map<number, number>()
       const freeSlotsByProductId = new Map<number, number>()
+      const providerSlotInfoById = new Map<
+        string,
+        { slotLabel: string; profilePin: string; inventoryAccountId: string }
+      >()
 
       if (!accountsResult.error) {
         const accountRows = (accountsResult.data ?? []) as Array<Record<string, unknown>>
@@ -3405,6 +3473,15 @@ export default function UserDashboardPage() {
         const slotRows = (slotsResult.data ?? []) as Array<Record<string, unknown>>
 
         for (const slot of slotRows) {
+          const slotId = toText(slot.id)
+          if (slotId) {
+            providerSlotInfoById.set(slotId, {
+              slotLabel: toText(slot.slot_label ?? slot.profile_name ?? slot.slot_name),
+              profilePin: toText(slot.profile_pin ?? slot.pin ?? slot.slot_pin),
+              inventoryAccountId: toText(slot.inventory_account_id),
+            })
+          }
+
           const occupiedByStatus = ['occupied', 'ocupado', 'used', 'taken', 'asignado'].includes(
             toText(slot.status).toLowerCase()
           )
@@ -3558,6 +3635,13 @@ export default function UserDashboardPage() {
         const orderId = toNullableIdText(row.order_id ?? row.orderId)
         const buyerId = toText(row.buyer_id ?? row.user_id)
         const linkedOrder = orderId ? orderById.get(orderId) : null
+        const orderCredentialsRaw = linkedOrder?.['credentials'] ?? null
+        const orderCredentialsSnapshot = extractCredentialSnapshot(formatCredentials(orderCredentialsRaw))
+        const orderInventorySlotId = toText(linkedOrder?.['inventory_slot_id']) || null
+        const linkedSlotInfo = orderInventorySlotId ? providerSlotInfoById.get(orderInventorySlotId) : null
+        const orderAccountType =
+          toText(linkedOrder?.['account_type']) ||
+          (productId !== null ? productById.get(productId)?.accountType ?? '' : '')
         const customerExtraRaw = linkedOrder ? formatCredentials(linkedOrder['customer_extra']) : ''
         const status = toText(row.status) || 'open'
         const type = toText(row.type ?? row.ticket_type) || 'soporte'
@@ -3573,6 +3657,17 @@ export default function UserDashboardPage() {
           deliveryMode: linkedDeliveryMode || 'instant',
           isOnDemandRequest,
           orderId,
+          orderAccountType,
+          orderInventorySlotId,
+          orderCredentialsRaw,
+          credentialLoginUser:
+            orderCredentialsSnapshot.username !== '-' ? stripInventoryProfileSuffix(orderCredentialsSnapshot.username) : '',
+          credentialLoginPassword: orderCredentialsSnapshot.password !== '-' ? orderCredentialsSnapshot.password : '',
+          credentialProfileLabel:
+            linkedSlotInfo?.slotLabel ||
+            (orderCredentialsSnapshot.profileNumber !== '-' ? orderCredentialsSnapshot.profileNumber : ''),
+          credentialProfilePin:
+            linkedSlotInfo?.profilePin || (orderCredentialsSnapshot.pin !== '-' ? orderCredentialsSnapshot.pin : ''),
           buyerId,
           buyerName: buyerNameById.get(buyerId) ?? 'Cliente',
           buyerPhone: buyerPhoneById.get(buyerId) ?? '',
@@ -3632,6 +3727,10 @@ export default function UserDashboardPage() {
           status: ticket.status,
           resolutionSummary: ticket.resolutionSummary,
           resolutionDetail: ticket.resolutionDetail,
+          loginUser: ticket.credentialLoginUser,
+          loginPassword: ticket.credentialLoginPassword,
+          profileLabel: ticket.credentialProfileLabel,
+          profilePin: ticket.credentialProfilePin,
         }
       }
       const orderDraftById: Record<string, ProviderOrderDraft> = {}
@@ -5193,7 +5292,15 @@ export default function UserDashboardPage() {
   function handleProviderTicketDraftChange(ticketId: string, patch: Partial<ProviderTicketDraft>) {
     setProviderTicketDrafts(previous => {
       const key = String(ticketId)
-      const current = previous[key] ?? { status: 'open', resolutionSummary: '', resolutionDetail: '' }
+      const current = previous[key] ?? {
+        status: 'open',
+        resolutionSummary: '',
+        resolutionDetail: '',
+        loginUser: '',
+        loginPassword: '',
+        profileLabel: '',
+        profilePin: '',
+      }
       return {
         ...previous,
         [key]: {
@@ -5210,9 +5317,39 @@ export default function UserDashboardPage() {
       status: ticket.status,
       resolutionSummary: ticket.resolutionSummary,
       resolutionDetail: ticket.resolutionDetail,
+      loginUser: ticket.credentialLoginUser,
+      loginPassword: ticket.credentialLoginPassword,
+      profileLabel: ticket.credentialProfileLabel,
+      profilePin: ticket.credentialProfilePin,
     }
 
     const normalizedStatus = draft.status.trim().toLowerCase() || 'open'
+    const isProfilesTicket = isProfilesAccountType(ticket.orderAccountType)
+    const currentLoginUser = ticket.credentialLoginUser.trim()
+    const currentLoginPassword = ticket.credentialLoginPassword.trim()
+    const currentProfileLabel = ticket.credentialProfileLabel.trim()
+    const currentProfilePin = ticket.credentialProfilePin.trim()
+    const nextLoginUser = draft.loginUser.trim() || currentLoginUser
+    const nextLoginPassword = draft.loginPassword.trim() || currentLoginPassword
+    const nextProfileLabel = draft.profileLabel.trim() || currentProfileLabel
+    const nextProfilePin = draft.profilePin.trim() || currentProfilePin
+
+    const changedCredentialFields: string[] = []
+    if (ticket.orderId !== null) {
+      if (nextLoginUser !== currentLoginUser) changedCredentialFields.push('correo/login')
+      if (nextLoginPassword !== currentLoginPassword) changedCredentialFields.push('contrasena')
+      if (isProfilesTicket && nextProfileLabel !== currentProfileLabel) changedCredentialFields.push('perfil')
+      if (isProfilesTicket && nextProfilePin !== currentProfilePin) changedCredentialFields.push('PIN')
+    }
+
+    const autoResolutionDetail =
+      changedCredentialFields.length > 0
+        ? `Credenciales actualizadas por proveedor: ${changedCredentialFields.join(', ')}.`
+        : ''
+    const mergedResolutionDetail = [draft.resolutionDetail.trim(), autoResolutionDetail]
+      .filter(Boolean)
+      .join(' | ')
+
     const resolvedAt =
       normalizedStatus === 'resolved' || normalizedStatus === 'resuelto' || normalizedStatus === 'closed'
         ? new Date().toISOString()
@@ -5222,7 +5359,7 @@ export default function UserDashboardPage() {
       {
         status: normalizedStatus,
         resolution_summary: draft.resolutionSummary.trim() || null,
-        resolution_detail: draft.resolutionDetail.trim() || null,
+        resolution_detail: mergedResolutionDetail || null,
         resolved_at: resolvedAt,
       },
       {
@@ -5257,28 +5394,102 @@ export default function UserDashboardPage() {
     }
 
     let orderSyncError = ''
-    if (ticket.orderId !== null && ticket.isOnDemandRequest) {
-      let orderPatch: Record<string, unknown> | null = null
-      if (
-        normalizedStatus === 'resolved' ||
-        normalizedStatus === 'resuelto' ||
-        normalizedStatus === 'delivered' ||
-        normalizedStatus === 'entregado'
-      ) {
-        orderPatch = {
-          status: 'delivered',
-          delivered_at: new Date().toISOString(),
+    if (ticket.orderId !== null) {
+      const orderPatch: Record<string, unknown> = {}
+      if (ticket.isOnDemandRequest) {
+        if (
+          normalizedStatus === 'resolved' ||
+          normalizedStatus === 'resuelto' ||
+          normalizedStatus === 'delivered' ||
+          normalizedStatus === 'entregado'
+        ) {
+          orderPatch.status = 'delivered'
+          orderPatch.delivered_at = new Date().toISOString()
+        } else if (normalizedStatus === 'in_progress' || normalizedStatus === 'en_proceso') {
+          orderPatch.status = 'in_progress'
+        } else if (normalizedStatus === 'open' || normalizedStatus === 'abierto') {
+          orderPatch.status = 'pending'
         }
-      } else if (normalizedStatus === 'in_progress' || normalizedStatus === 'en_proceso') {
-        orderPatch = { status: 'in_progress' }
-      } else if (normalizedStatus === 'open' || normalizedStatus === 'abierto') {
-        orderPatch = { status: 'pending' }
       }
 
-      if (orderPatch) {
+      if (changedCredentialFields.length > 0) {
+        orderPatch.credentials = buildOrderCredentialPayload(ticket.orderCredentialsRaw, {
+          loginUser: nextLoginUser,
+          loginPassword: nextLoginPassword,
+          profileLabel: nextProfileLabel,
+          profilePin: nextProfilePin,
+          isProfiles: isProfilesTicket,
+        })
+      }
+
+      if (Object.keys(orderPatch).length > 0) {
         const { error: orderError } = await supabase.from('orders').update(orderPatch).eq('id', ticket.orderId)
         if (orderError) {
           orderSyncError = orderError.message
+        }
+      }
+
+      if (!orderSyncError && changedCredentialFields.length > 0 && ticket.orderInventorySlotId) {
+        let linkedAccountId = ''
+        const { data: slotRow, error: slotReadError } = await supabase
+          .from('inventory_slots')
+          .select('inventory_account_id')
+          .eq('id', ticket.orderInventorySlotId)
+          .maybeSingle()
+
+        if (slotReadError && !isLikelySchemaError(slotReadError.message)) {
+          orderSyncError = `No se pudo leer slot vinculado. ${slotReadError.message}`
+        } else {
+          linkedAccountId = toText((slotRow as Record<string, unknown> | null)?.inventory_account_id)
+        }
+
+        if (!orderSyncError && isProfilesTicket) {
+          const slotPatch: Record<string, unknown> = {}
+          if (nextProfileLabel) slotPatch.slot_label = nextProfileLabel
+          if (nextProfilePin) slotPatch.profile_pin = nextProfilePin
+          if (Object.keys(slotPatch).length > 0) {
+            const { error: slotUpdateError } = await supabase
+              .from('inventory_slots')
+              .update(slotPatch)
+              .eq('id', ticket.orderInventorySlotId)
+            if (slotUpdateError) {
+              orderSyncError = `No se pudo actualizar perfil/PIN del slot. ${slotUpdateError.message}`
+            }
+          }
+        }
+
+        if (!orderSyncError && linkedAccountId) {
+          const { data: accountRow, error: accountReadError } = await supabase
+            .from('inventory_accounts')
+            .select('login_user')
+            .eq('id', linkedAccountId)
+            .maybeSingle()
+          if (accountReadError && !isLikelySchemaError(accountReadError.message)) {
+            orderSyncError = `No se pudo leer cuenta de inventario. ${accountReadError.message}`
+          } else {
+            const currentInventoryLogin = toText((accountRow as Record<string, unknown> | null)?.login_user)
+            const nextInventoryLogin = isProfilesTicket
+              ? composeInventoryProfileLogin(
+                  nextLoginUser || currentInventoryLogin,
+                  nextProfileLabel || currentProfileLabel || '1',
+                  currentInventoryLogin
+                )
+              : nextLoginUser
+
+            const accountPatch: Record<string, unknown> = {}
+            if (nextInventoryLogin) accountPatch.login_user = nextInventoryLogin
+            if (nextLoginPassword) accountPatch.login_password = nextLoginPassword
+
+            if (Object.keys(accountPatch).length > 0) {
+              const { error: accountUpdateError } = await supabase
+                .from('inventory_accounts')
+                .update(accountPatch)
+                .eq('id', linkedAccountId)
+              if (accountUpdateError) {
+                orderSyncError = `No se pudo actualizar cuenta de inventario. ${accountUpdateError.message}`
+              }
+            }
+          }
         }
       }
     }
@@ -8788,7 +8999,13 @@ export default function UserDashboardPage() {
                           status: providerSelectedTicket.status,
                           resolutionSummary: providerSelectedTicket.resolutionSummary,
                           resolutionDetail: providerSelectedTicket.resolutionDetail,
+                          loginUser: providerSelectedTicket.credentialLoginUser,
+                          loginPassword: providerSelectedTicket.credentialLoginPassword,
+                          profileLabel: providerSelectedTicket.credentialProfileLabel,
+                          profilePin: providerSelectedTicket.credentialProfilePin,
                         }
+                        const hasLinkedOrder = providerSelectedTicket.orderId !== null
+                        const isProfilesTicket = isProfilesAccountType(providerSelectedTicket.orderAccountType)
                         const clientPhone = normalizeWhatsappPhone(providerSelectedTicket.buyerPhone || '')
                         const whatsappText = encodeURIComponent(
                           `Hola ${providerSelectedTicket.buyerName || ''}, te escribo por tu ticket #${
@@ -8915,6 +9132,70 @@ export default function UserDashboardPage() {
                                       placeholder='Cambios aplicados'
                                     />
                                   </label>
+
+                                  {hasLinkedOrder && (
+                                    <>
+                                      <label className={styles.providerField}>
+                                        <span>Correo / login</span>
+                                        <input
+                                          type='text'
+                                          value={draft.loginUser}
+                                          onChange={event =>
+                                            handleProviderTicketDraftChange(providerSelectedTicket.id, {
+                                              loginUser: event.target.value,
+                                            })
+                                          }
+                                          placeholder='correo@servicio.com'
+                                        />
+                                      </label>
+
+                                      <label className={styles.providerField}>
+                                        <span>Contrasena</span>
+                                        <input
+                                          type='text'
+                                          value={draft.loginPassword}
+                                          onChange={event =>
+                                            handleProviderTicketDraftChange(providerSelectedTicket.id, {
+                                              loginPassword: event.target.value,
+                                            })
+                                          }
+                                          placeholder='Nueva contrasena'
+                                        />
+                                      </label>
+
+                                      {isProfilesTicket && (
+                                        <>
+                                          <label className={styles.providerField}>
+                                            <span>Perfil</span>
+                                            <input
+                                              type='text'
+                                              value={draft.profileLabel}
+                                              onChange={event =>
+                                                handleProviderTicketDraftChange(providerSelectedTicket.id, {
+                                                  profileLabel: event.target.value,
+                                                })
+                                              }
+                                              placeholder='Ej: Perfil 1'
+                                            />
+                                          </label>
+
+                                          <label className={styles.providerField}>
+                                            <span>PIN perfil</span>
+                                            <input
+                                              type='text'
+                                              value={draft.profilePin}
+                                              onChange={event =>
+                                                handleProviderTicketDraftChange(providerSelectedTicket.id, {
+                                                  profilePin: event.target.value,
+                                                })
+                                              }
+                                              placeholder='Ej: 1234'
+                                            />
+                                          </label>
+                                        </>
+                                      )}
+                                    </>
+                                  )}
                                 </div>
 
                                 <div className={styles.providerActionRow}>

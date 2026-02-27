@@ -335,6 +335,21 @@ function parseExtraRequiredFields(value: unknown): ExtraRequiredField[] {
   }
 
   if (typeof raw === 'object' && raw !== null) {
+    const rawRecord = raw as Record<string, unknown>
+    const nestedFieldsCandidate =
+      rawRecord.fields ??
+      rawRecord.extra_fields ??
+      rawRecord.extra_required_fields ??
+      rawRecord.campos ??
+      rawRecord.campos_extra
+
+    if (nestedFieldsCandidate !== undefined) {
+      const nestedParsed = parseExtraRequiredFields(nestedFieldsCandidate)
+      if (nestedParsed.length > 0) {
+        return nestedParsed
+      }
+    }
+
     return Object.entries(raw as Record<string, unknown>)
       .map(([key, item]) => {
         const safeKey = toFieldKey(key, 'extra')
@@ -1521,7 +1536,12 @@ export default function ProductsPage() {
                 </div>
 
                 <h2 className={styles.cardTitle}>
-                  {getAccountTypeIcon(item.accountType)} {item.name}
+                  <span className={styles.cardTitleIcon}>{getAccountTypeIcon(item.accountType)}</span>
+                  <span className={styles.cardTitleTickerMask} title={item.name}>
+                    <span className={styles.cardTitleTickerTrack}>
+                      <span className={styles.cardTitleTickerItem}>{item.name}</span>
+                    </span>
+                  </span>
                 </h2>
                 <p className={styles.cardMeta}>
                   <span className={styles.profileInfoIcon} title='Info del producto'>

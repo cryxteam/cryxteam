@@ -1082,6 +1082,45 @@
   margin: 0;
   font-size: 1.02rem;
   line-height: 1.15;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cardTitleIcon {
+  flex: 0 0 auto;
+}
+
+.cardTitleTickerMask {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.cardTitleTickerTrack {
+  display: inline-block;
+  white-space: nowrap;
+  padding-left: 100%;
+  animation: cardTitleTickerMove 8s linear infinite;
+  will-change: transform;
+}
+
+.cardTitleTickerItem {
+  display: inline-block;
+  padding-right: 0;
+  white-space: nowrap;
+}
+
+@keyframes cardTitleTickerMove {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-100%);
+  }
 }
 
 .cardMeta {
