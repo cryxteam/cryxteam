@@ -1582,6 +1582,7 @@ export default function UserDashboardPage() {
   const [isAffiliateSubmitting, setIsAffiliateSubmitting] = useState(false)
   const [showAffiliateNotFoundModal, setShowAffiliateNotFoundModal] = useState(false)
   const [showAffiliateRulesModal, setShowAffiliateRulesModal] = useState(false)
+  const [showAffiliateMembersList, setShowAffiliateMembersList] = useState(true)
   const [affiliateMembers, setAffiliateMembers] = useState<AffiliateMember[]>([])
   const [isAffiliateMembersLoading, setIsAffiliateMembersLoading] = useState(false)
   const [affiliateMembersMsg, setAffiliateMembersMsg] = useState('')
@@ -8014,6 +8015,15 @@ export default function UserDashboardPage() {
                             ⚡ Distribuidores afiliados
                             <span className={styles.affiliatesInlineCount}>{affiliateMembers.length}</span>
                           </h4>
+                          {!isAffiliateMembersLoading && affiliateMembers.length > 0 && (
+                            <button
+                              type='button'
+                              className={styles.affiliatesToggleButton}
+                              onClick={() => setShowAffiliateMembersList(prev => !prev)}
+                            >
+                              {showAffiliateMembersList ? 'Ocultar' : 'Mostrar'}
+                            </button>
+                          )}
                         </div>
 
                         {isAffiliateMembersLoading && <p className={styles.panelEmpty}>Cargando afiliados...</p>}
@@ -8022,35 +8032,43 @@ export default function UserDashboardPage() {
                         )}
                         {affiliateMembersMsg && <p className={styles.inlineError}>{affiliateMembersMsg}</p>}
 
-                        <div className={styles.affiliatesGrid}>
-                          {affiliateMembers.map(member => (
-                            <article key={member.id} className={styles.affiliateMemberCard}>
-                              <div className={styles.affiliateMemberTop}>
-                                <strong>{member.username}</strong>
-                                <span
-                                  className={member.approved ? styles.affiliateStateOk : styles.affiliateStatePending}
-                                >
-                                  {member.approved ? 'Aprobado' : 'Pendiente'}
-                                </span>
-                              </div>
+                        {!isAffiliateMembersLoading && affiliateMembers.length > 0 && showAffiliateMembersList && (
+                          <div className={styles.affiliatesScroll}>
+                            <div className={styles.affiliatesGrid}>
+                              {affiliateMembers.map(member => (
+                                <article key={member.id} className={styles.affiliateMemberCard}>
+                                  <div className={styles.affiliateMemberTop}>
+                                    <strong>{member.username}</strong>
+                                    <span
+                                      className={member.approved ? styles.affiliateStateOk : styles.affiliateStatePending}
+                                    >
+                                      {member.approved ? 'Aprobado' : 'Pendiente'}
+                                    </span>
+                                  </div>
 
-                              <div className={styles.affiliateStatsGrid}>
-                                <p>
-                                  <span>Ventas</span>
-                                  <strong>{member.salesCount}</strong>
-                                </p>
-                                <p>
-                                  <span>Monto</span>
-                                  <strong>{formatMoney(member.salesAmount)}</strong>
-                                </p>
-                                <p>
-                                  <span>Alta</span>
-                                  <strong>{formatDate(member.linkedAt)}</strong>
-                                </p>
-                              </div>
-                            </article>
-                          ))}
-                        </div>
+                                  <div className={styles.affiliateStatsGrid}>
+                                    <p>
+                                      <span>Ventas</span>
+                                      <strong>{member.salesCount}</strong>
+                                    </p>
+                                    <p>
+                                      <span>Monto</span>
+                                      <strong>{formatMoney(member.salesAmount)}</strong>
+                                    </p>
+                                    <p>
+                                      <span>Alta</span>
+                                      <strong>{formatDate(member.linkedAt)}</strong>
+                                    </p>
+                                  </div>
+                                </article>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {!isAffiliateMembersLoading && affiliateMembers.length > 0 && !showAffiliateMembersList && (
+                          <p className={styles.panelEmpty}>Lista oculta. Pulsa "Mostrar" para verla.</p>
+                        )}
                       </section>
                     </div>
                   </div>
