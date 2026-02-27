@@ -452,16 +452,11 @@ export default function RegisterPage() {
               onPhoneChange={setPhone}
             />
 
-            <div className={styles.turnstileWrap}>
-              {turnstileSiteKey ? (
-                <div ref={turnstileRef} className={styles.turnstileBox} />
-              ) : (
-                <p className={styles.turnstileHint}>Falta configurar NEXT_PUBLIC_TURNSTILE_SITE_KEY.</p>
-              )}
-              {turnstileSiteKey && !turnstileToken && (
-                <p className={styles.turnstileHint}>Completa el captcha para continuar.</p>
-              )}
-            </div>
+            {turnstileSiteKey ? (
+              <div ref={turnstileRef} className={styles.turnstileBox} />
+            ) : (
+              <p className={styles.turnstileHint}>Falta configurar NEXT_PUBLIC_TURNSTILE_SITE_KEY.</p>
+            )}
 
             <button
               className={styles.mainBtn}
