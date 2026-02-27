@@ -4131,18 +4131,20 @@
 
 .affiliatesGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
 .affiliateMemberCard {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  padding: 8px 0;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 85% 8%, rgba(34, 211, 238, 0.08), transparent 34%),
+    linear-gradient(145deg, rgba(12, 16, 36, 0.88), rgba(8, 12, 28, 0.9));
+  padding: 10px 12px;
   display: grid;
-  gap: 8px;
-  transition: none;
+  gap: 9px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   animation: none;
 }
 
@@ -4155,20 +4157,24 @@
 }
 
 .affiliateMemberCard:hover {
-  transform: none;
-  border-color: transparent;
-  box-shadow: none;
+  transform: translateY(-1px);
+  border-color: rgba(125, 211, 252, 0.44);
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.34);
 }
 
 .affiliateMemberTop {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
 }
 
 .affiliateMemberTop strong {
-  font-size: 0.95rem;
+  min-width: 0;
+  font-size: 0.96rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .affiliateStateOk,
@@ -4178,6 +4184,7 @@
   font-weight: 800;
   padding: 3px 7px;
   border: 1px solid transparent;
+  white-space: nowrap;
 }
 
 .affiliateStateOk {
@@ -4203,6 +4210,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  border-radius: 9px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.35);
+  padding: 6px 8px;
 }
 
 .affiliateStatsGrid span {
@@ -4215,6 +4226,9 @@
 .affiliateStatsGrid strong {
   color: #e2e8f0;
   font-size: 0.84rem;
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .affiliateRewardsPanel {
@@ -8315,8 +8329,8 @@
   }
 
   .affiliateMemberTop {
-    flex-direction: column;
-    align-items: flex-start;
+    grid-template-columns: 1fr;
+    justify-items: start;
   }
 
   .affiliationModalCard {
