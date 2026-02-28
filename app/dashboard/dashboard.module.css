@@ -3437,8 +3437,8 @@
   .providerCreateModalBackdrop,
   .providerInventoryModalBackdrop {
     display: flex;
-    justify-content: flex-end;
-    align-items: flex-start;
+    justify-content: center;
+    align-items: center;
     padding: 14px;
     overflow: hidden;
   }
@@ -3446,14 +3446,16 @@
   .providerCreateModalCard,
   .providerInventoryModalCard {
     width: min(500px, calc(100vw - 28px));
-    height: calc(100vh - 28px);
-    max-height: calc(100vh - 28px);
+    height: min(84vh, 860px);
+    max-height: min(84vh, 860px);
     margin: 0;
+    align-content: start;
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     touch-action: pan-y;
+    scrollbar-gutter: stable;
     border-radius: 16px;
     padding: 14px 14px 12px;
   }
