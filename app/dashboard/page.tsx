@@ -2892,6 +2892,7 @@ export default function UserDashboardPage() {
         .eq('id', userId)
       if (buyerUpdateError) throw new Error(`No se pudo descontar saldo. ${buyerUpdateError.message}`)
       buyerDebited = true
+      setProfile(previous => (previous ? { ...previous, balance: nextBuyerBalance } : previous))
 
       if (providerCredit > 0) {
         const { data: providerProfileData, error: providerReadError } = await supabase
@@ -2928,7 +2929,14 @@ export default function UserDashboardPage() {
       if (durationDays === null) throw new Error('Este producto no tiene duracion valida para renovar.')
 
       const now = new Date()
-      const currentExpiresRaw = toText(orderRow.expires_at) || order.expiresAt || ''
+      const startsAt = toText(orderRow.starts_at) || order.startsAt || now.toISOString()
+      let currentExpiresRaw = toText(orderRow.expires_at) || order.expiresAt || ''
+      if (!currentExpiresRaw && durationDays !== null) {
+        const startDate = new Date(startsAt)
+        if (!Number.isNaN(startDate.getTime())) {
+          currentExpiresRaw = new Date(startDate.getTime() + durationDays * 86400000).toISOString()
+        }
+      }
       const currentExpiresDate = currentExpiresRaw ? new Date(currentExpiresRaw) : null
       const hasActiveExpiry =
         currentExpiresDate !== null &&
@@ -2936,7 +2944,6 @@ export default function UserDashboardPage() {
         currentExpiresDate.getTime() > now.getTime()
       const baseDate = hasActiveExpiry && currentExpiresDate ? currentExpiresDate : now
       const nextExpiresAt = new Date(baseDate.getTime() + durationDays * 86400000).toISOString()
-      const startsAt = toText(orderRow.starts_at) || order.startsAt || now.toISOString()
       const currentStatus = toText(orderRow.status)
       const nextStatus = isPaidLikeOrderStatus(currentStatus) ? currentStatus : 'paid'
 
@@ -2994,6 +3001,7 @@ export default function UserDashboardPage() {
       }
       if (buyerDebited) {
         await supabase.from('profiles').update({ balance: buyerBalanceCurrent }).eq('id', userId)
+        setProfile(previous => (previous ? { ...previous, balance: buyerBalanceCurrent } : previous))
       }
 
       setUserOrderRenewFeedback(previous => ({
