@@ -28,6 +28,14 @@ type ProductRow = {
   account_type: string | null
   renewable: boolean | null
   duration_days: number | null
+  renewal_price?: number | null
+  price_renewal?: number | null
+  renewal_price_affiliate?: number | null
+  price_renovation?: number | null
+  renewalPrice?: number | null
+  price_affiliate?: number | null
+  price_logged?: number | null
+  price_guest?: number | null
 }
 
 type OrderRow = {
@@ -111,6 +119,7 @@ type OwnedProduct = {
   expiresAt: string | null
   daysLeft: number | null
   renewableLabel: string
+  renewalAmount: number | null
   pricePaid: number
   customerName: string
   customerPhone: string
@@ -2060,7 +2069,9 @@ export default function UserDashboardPage() {
           if (productIds.length > 0) {
             const { data, error } = await supabase
               .from('products')
-              .select('id, provider_id, name, description, delivery_mode, account_type, renewable, duration_days')
+              .select(
+                'id, provider_id, name, description, delivery_mode, account_type, renewable, duration_days, renewal_price, price_renewal, renewal_price_affiliate, price_renovation, price_affiliate, price_logged, price_guest'
+              )
               .in('id', productIds)
 
             if (!mounted) return
@@ -2264,6 +2275,12 @@ export default function UserDashboardPage() {
                   ? 'Renovable'
                   : 'No renovable'
                 : '-'
+            const productRowForRenewal = (product ?? {}) as Record<string, unknown>
+            const renewalAmountRaw = resolveRenewalAmountFromProductRow(
+              productRowForRenewal,
+              Math.max(0, toNumber(order.price_paid))
+            )
+            const renewalAmount = Number.isFinite(renewalAmountRaw) && renewalAmountRaw > 0 ? renewalAmountRaw : null
             const durationRaw = toNullableNumber(order.duration_days ?? product?.duration_days)
             const durationDays = durationRaw === null ? null : Math.max(1, Math.floor(durationRaw))
             const startsAt = toText(order.starts_at) || null
@@ -2286,6 +2303,7 @@ export default function UserDashboardPage() {
               expiresAt,
               daysLeft,
               renewableLabel,
+              renewalAmount,
               pricePaid: toNumber(order.price_paid),
               customerName: toText(order.customer_name),
               customerPhone: toText(order.customer_phone),
@@ -5309,6 +5327,17 @@ export default function UserDashboardPage() {
     const isProfilesProduct = isProfilesAccountType(accountType)
     const priceGuest = Math.max(0, toNumber(parseDecimalInput(providerProductForm.priceGuest), NaN))
     const priceAffiliate = Math.max(0, toNumber(parseDecimalInput(providerProductForm.priceAffiliate), NaN))
+    const renewalRaw = providerProductForm.renewalPrice.trim()
+    let renewalPrice: number | null = null
+    if (providerProductForm.renewable && renewalRaw.length > 0) {
+      const parsedRenewal = toNumber(parseDecimalInput(renewalRaw), NaN)
+      if (!Number.isFinite(parsedRenewal) || parsedRenewal < 0) {
+        setProviderMsgType('error')
+        setProviderMsg('Precio de renovacion invalido.')
+        return
+      }
+      renewalPrice = parsedRenewal
+    }
     const profilesPerAccount = Math.floor(toNumber(parseDecimalInput(providerProductForm.profilesPerAccount), NaN))
     const durationRaw = providerProductForm.durationDays.trim()
     let durationDays: number | null = null
@@ -5431,6 +5460,7 @@ export default function UserDashboardPage() {
       price_guest: priceGuest,
       price_affiliate: priceAffiliate,
       price_logged: priceAffiliate,
+      renewal_price: providerProductForm.renewable ? renewalPrice : null,
       duration_days: durationDays,
       renewable: providerProductForm.renewable,
       delivery_mode: providerProductForm.deliveryMode,
@@ -12143,7 +12173,8 @@ export default function UserDashboardPage() {
             </p>
 
             <p className={styles.panelDescription}>
-              Se descontara saldo de tu cuenta y se extendera la vigencia del servicio.
+              Se descontara <strong>{formatMoney(userRenewConfirmOrder.renewalAmount ?? userRenewConfirmOrder.pricePaid)}</strong>{' '}
+              de tu saldo y se extendera la vigencia del servicio.
             </p>
 
             <div className={styles.userOrderEditActions}>
