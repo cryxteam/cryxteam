@@ -3807,7 +3807,7 @@ export default function UserDashboardPage() {
           Math.floor(toNumber(row.stock_available ?? row.stock ?? row.quantity ?? row.available_stock, 0))
         )
         const stock = isProfilesAccountType(accountType)
-          ? freeSlotsByProductId.get(id) ?? 0
+          ? freeSlotsByProductId.get(id) ?? stockManual
           : activeAccountsByProductId.get(id) ?? stockManual
         const priceGuest = Math.max(0, toNumber(row.price_guest ?? row.guest_price ?? row.public_price))
         const priceAffiliate = Math.max(
@@ -4620,6 +4620,13 @@ export default function UserDashboardPage() {
 
       const [accountsResult, slotsResult] = await Promise.all([accountCountQuery, slotCountQuery])
 
+      if (accountsResult.error && !isLikelySchemaError(accountsResult.error.message)) {
+        return
+      }
+      if (slotsResult.error && !isLikelySchemaError(slotsResult.error.message)) {
+        return
+      }
+
       const accountRows = (accountsResult.data ?? []) as Array<Record<string, unknown>>
       const activeAccounts = accountRows.filter(row => row.is_active !== false).length
 
@@ -4633,7 +4640,11 @@ export default function UserDashboardPage() {
         return sum + (isOccupiedStatus || buyerAssigned ? 0 : 1)
       }, 0)
 
-      const stockAvailable = isProfilesAccountType(product.accountType) ? freeSlots : activeAccounts
+      const stockAvailable = isProfilesAccountType(product.accountType)
+        ? slotRows.length > 0
+          ? freeSlots
+          : activeAccounts
+        : activeAccounts
 
       let stockUpdateQuery = supabase.from('products').update({ stock_available: stockAvailable }).eq('id', product.id)
       if (!isOwner) {
@@ -5424,8 +5435,6 @@ export default function UserDashboardPage() {
       renewable: providerProductForm.renewable,
       delivery_mode: providerProductForm.deliveryMode,
       extra_required_fields: extraRequiredFieldsPayload,
-      active: providerProductForm.isActive,
-      is_active: providerProductForm.isActive,
     }
     const accountTypeCandidates = [
       toProductAccountTypeForDb(accountType),
@@ -5459,6 +5468,8 @@ export default function UserDashboardPage() {
           ...payload,
           provider_id: userId,
           stock_available: 0,
+          active: providerProductForm.isActive,
+          is_active: providerProductForm.isActive,
         }
         const { error } = await supabase.from('products').insert(createPayload)
         if (!error) {
