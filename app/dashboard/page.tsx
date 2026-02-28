@@ -2059,12 +2059,16 @@ export default function UserDashboardPage() {
             }
           }
 
-          const productIdSet = new Set<string>()
+          const productIdSet = new Set<number>()
           for (const order of orderRows) {
-            if (order.product_id !== null) productIdSet.add(String(order.product_id))
+            const productId = toNullableNumber(order.product_id)
+            if (productId === null || !Number.isFinite(productId) || productId <= 0) continue
+            productIdSet.add(Math.floor(productId))
           }
           for (const ticket of ticketRows) {
-            if (ticket.product_id !== null) productIdSet.add(String(ticket.product_id))
+            const productId = toNullableNumber(ticket.product_id)
+            if (productId === null || !Number.isFinite(productId) || productId <= 0) continue
+            productIdSet.add(Math.floor(productId))
           }
 
           let productRows: ProductRow[] = []
@@ -2072,9 +2076,7 @@ export default function UserDashboardPage() {
           if (productIds.length > 0) {
             const { data, error } = await supabase
               .from('products')
-              .select(
-                'id, provider_id, name, description, delivery_mode, account_type, renewable, duration_days, renewal_price, price_renewal, renewal_price_affiliate, price_renovation, price_affiliate, price_logged, price_guest'
-              )
+              .select('*')
               .in('id', productIds)
 
             if (!mounted) return
