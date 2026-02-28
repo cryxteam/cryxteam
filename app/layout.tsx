@@ -2,7 +2,7 @@ import './globals.css'
 
 export const metadata = {
   title: 'CryxTeam',
-  description: 'Administra plataformas de streaming',
+  description: 'La mejor web de Streaming',
 }
 
 export default function RootLayout({
