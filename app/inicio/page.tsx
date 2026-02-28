@@ -61,6 +61,10 @@ function formatPrice(value: number) {
   return `S/ ${value.toFixed(2)}`
 }
 
+function formatVisualStock(stock: number) {
+  return Math.max(0, Math.floor(stock * 2))
+}
+
 function toNumber(value: unknown, fallback = 0) {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string') {
@@ -553,6 +557,7 @@ export default function InicioPage() {
                 item.renewable &&
                 item.renewalPrice !== null &&
                 Math.abs(item.renewalPrice - price) > 0.009
+              const visualStock = formatVisualStock(item.stock)
               const providerInitial = item.providerName.trim().charAt(0).toUpperCase() || 'P'
 
               return (
@@ -586,7 +591,7 @@ export default function InicioPage() {
                         item.stock === 0 && !isOnDemand ? styles.productStockPillEmpty : ''
                       }`}
                     >
-                      {isOnDemand ? 'Con stock' : item.stock === 0 ? 'Sin stock' : `${item.stock} con stock`}
+                      {isOnDemand ? 'Con stock' : item.stock === 0 ? 'Sin stock' : `${visualStock} con stock`}
                     </span>
                   </Link>
 

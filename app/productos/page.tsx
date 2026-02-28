@@ -115,6 +115,10 @@ function formatPrice(value: number) {
   return `S/ ${value.toFixed(2)}`
 }
 
+function formatVisualStock(stock: number) {
+  return Math.max(0, Math.floor(stock * 2))
+}
+
 function detectCategory(name: string): CategoryKey {
   const normalized = name.toLowerCase()
 
@@ -1546,6 +1550,7 @@ export default function ProductsPage() {
               item.renewable &&
               item.renewalPrice !== null &&
               Math.abs(item.renewalPrice - displayPrice) > 0.009
+            const visualStock = formatVisualStock(item.stock)
             const providerInitial = item.providerName.trim().charAt(0).toUpperCase() || 'P'
 
             return (
@@ -1583,7 +1588,7 @@ export default function ProductsPage() {
                       isBlockedByStock ? styles.cardStockPillEmpty : ''
                     }`}
                   >
-                    {isOnDemand ? 'A pedido' : item.stock === 0 ? 'Sin stock' : `${item.stock} con stock`}
+                    {isOnDemand ? 'A pedido' : item.stock === 0 ? 'Sin stock' : `${visualStock} con stock`}
                   </span>
                 </div>
 
