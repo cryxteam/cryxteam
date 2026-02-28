@@ -3433,6 +3433,52 @@
   color: #ecfeff;
 }
 
+@media (min-width: 1024px) {
+  .providerCreateModalBackdrop,
+  .providerInventoryModalBackdrop {
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+    padding: 14px;
+    overflow: hidden;
+  }
+
+  .providerCreateModalCard,
+  .providerInventoryModalCard {
+    width: min(500px, calc(100vw - 28px));
+    height: calc(100vh - 28px);
+    max-height: calc(100vh - 28px);
+    margin: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    border-radius: 16px;
+    padding: 14px 14px 12px;
+  }
+
+  .providerCreateModalCard .providerFormGrid,
+  .providerInventoryModalCard .providerFormGrid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .providerCreateModalCard .providerHeadActions {
+    justify-content: flex-end;
+  }
+
+  .providerCreateModalCard .providerActionRow,
+  .providerInventoryModalCard .providerProfilesModalActions {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    padding-top: 8px;
+    padding-bottom: 2px;
+    background: linear-gradient(180deg, rgba(12, 10, 28, 0), rgba(12, 10, 28, 0.95) 42%);
+  }
+}
+
 @keyframes providerModalFadeIn {
   from {
     opacity: 0;
