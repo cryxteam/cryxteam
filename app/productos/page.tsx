@@ -61,6 +61,7 @@ type Product = {
   logo: string
   stock: number
   summary: string
+  termsAndConditions: string
   durationDays: number | null
   priceGuest: number
   priceAffiliate: number
@@ -539,6 +540,9 @@ function normalizeProducts(
           row.description ?? row.cycle ?? row.plan ?? row.duration,
           'Producto digital'
         ),
+        termsAndConditions: toText(
+          row.terms_and_conditions ?? row.terms_conditions ?? row.terms
+        ),
         durationDays: durationDays === null ? null : Math.max(1, Math.floor(durationDays)),
         priceGuest,
         priceAffiliate,
@@ -591,6 +595,7 @@ export default function ProductsPage() {
     typeof window === 'undefined' ? 1280 : window.innerWidth
   )
   const [catalogPage, setCatalogPage] = useState(1)
+  const [activeTermsProductId, setActiveTermsProductId] = useState<number | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -871,6 +876,7 @@ export default function ProductsPage() {
   }, [catalogReloadSeq, currentUserId])
 
   function startPurchase(product: Product) {
+    setActiveTermsProductId(null)
     if (activePurchaseId === product.id) {
       setActivePurchaseId(null)
       setPurchaseCustomerName('')
@@ -892,6 +898,14 @@ export default function ProductsPage() {
     setPurchaseExtraValues(defaults)
     setPurchaseMsg('')
     setPurchaseError('')
+  }
+
+  function openTermsModal(product: Product) {
+    setActiveTermsProductId(product.id)
+  }
+
+  function closeTermsModal() {
+    setActiveTermsProductId(null)
   }
 
   async function handlePurchase(product: Product) {
@@ -1222,6 +1236,10 @@ export default function ProductsPage() {
     if (activePurchaseId === null) return null
     return products.find(item => item.id === activePurchaseId) ?? null
   }, [products, activePurchaseId])
+  const activeTermsProduct = useMemo(() => {
+    if (activeTermsProductId === null) return null
+    return products.find(item => item.id === activeTermsProductId) ?? null
+  }, [products, activeTermsProductId])
 
   const canPurchase = viewerMode === 'affiliate'
   const priceLabel = canPurchase ? 'Precio distribuidor' : 'Precio publico'
@@ -1631,6 +1649,14 @@ export default function ProductsPage() {
                   </span>
                 </p>
 
+                <button
+                  type='button'
+                  className={styles.termsButton}
+                  onClick={() => openTermsModal(item)}
+                >
+                  Terminos
+                </button>
+
                 <div className={styles.cardPriceRow}>
                   <span className={styles.priceChip}>{formatPrice(displayPrice)}</span>
                   {!canPurchase && (
@@ -1757,12 +1783,17 @@ export default function ProductsPage() {
               <div className={styles.purchasePanel}>
                 <article className={styles.purchaseProductInfo}>
                   <p>
-                    <strong>Descripcion:</strong> {activePurchaseProduct.summary}
-                  </p>
-                  <p>
                     <strong>Duracion:</strong> {formatDuration(activePurchaseProduct.durationDays)}
                   </p>
                 </article>
+
+                <button
+                  type='button'
+                  className={styles.termsOpenButton}
+                  onClick={() => openTermsModal(activePurchaseProduct)}
+                >
+                  Leer terminos y condiciones
+                </button>
 
                 <label className={styles.purchaseField}>
                   <span>Nombre del cliente</span>
@@ -1815,6 +1846,49 @@ export default function ProductsPage() {
 
                 {purchaseError && <p className={styles.purchaseError}>{purchaseError}</p>}
                 {purchaseMsg && <p className={styles.purchaseSuccess}>{purchaseMsg}</p>}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {activeTermsProduct && (
+          <div className={styles.purchaseModalBackdrop} role='presentation'>
+            <section
+              className={styles.termsModal}
+              role='dialog'
+              aria-modal='true'
+              aria-labelledby='terms-modal-title'
+            >
+              <header className={styles.purchaseModalHead}>
+                <div>
+                  <p className={styles.purchaseModalKicker}>Producto</p>
+                  <h3 id='terms-modal-title'>Terminos y condiciones</h3>
+                  <p className={styles.purchaseModalMeta}>{activeTermsProduct.name}</p>
+                </div>
+                <button type='button' className={styles.purchaseModalClose} onClick={closeTermsModal}>
+                  ✕
+                </button>
+              </header>
+
+              <div className={styles.termsModalBody}>
+                <article className={styles.termsBlock}>
+                  <h4>Terminos</h4>
+                  <p>
+                    {activeTermsProduct.termsAndConditions.trim().length > 0
+                      ? activeTermsProduct.termsAndConditions
+                      : 'El proveedor aun no agrego terminos para este producto.'}
+                  </p>
+                </article>
+                <article className={styles.termsBlock}>
+                  <h4>Detalle del producto</h4>
+                  <p>{activeTermsProduct.summary || 'Sin detalle adicional.'}</p>
+                </article>
+              </div>
+
+              <div className={styles.termsModalActions}>
+                <button type='button' className={styles.buyConfirmButton} onClick={closeTermsModal}>
+                  Cerrar
+                </button>
               </div>
             </section>
           </div>

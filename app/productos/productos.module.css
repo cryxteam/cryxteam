@@ -1158,6 +1158,25 @@
   white-space: nowrap;
 }
 
+.termsButton {
+  justify-self: start;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.46);
+  background: rgba(15, 23, 42, 0.72);
+  color: #bae6fd;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 0 11px;
+  cursor: pointer;
+}
+
+.termsButton:hover {
+  border-color: rgba(125, 211, 252, 0.72);
+  filter: brightness(1.08);
+}
+
 .cardPriceRow {
   display: flex;
   align-items: center;
@@ -1439,6 +1458,16 @@
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }
 
+.termsOpenButton {
+  border-radius: 10px;
+  border: 1px solid rgba(251, 191, 36, 0.58);
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.86), rgba(234, 179, 8, 0.9));
+  color: #0f172a;
+  font-weight: 900;
+  height: 38px;
+  cursor: pointer;
+}
+
 .buyConfirmButton {
   border-radius: 10px;
   border: 1px solid rgba(125, 211, 252, 0.58);
@@ -1472,6 +1501,59 @@
   color: #bbf7d0;
   border: 1px solid rgba(74, 222, 128, 0.4);
   background: rgba(20, 83, 45, 0.3);
+}
+
+.termsModal {
+  width: min(660px, calc(100vw - 20px));
+  max-height: calc(100vh - 26px);
+  overflow: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(125, 211, 252, 0.44);
+  background:
+    radial-gradient(circle at 90% 0%, rgba(34, 211, 238, 0.14), transparent 38%),
+    radial-gradient(circle at 12% 0%, rgba(168, 85, 247, 0.16), transparent 40%),
+    linear-gradient(180deg, rgba(13, 16, 35, 0.98), rgba(7, 11, 28, 0.99));
+  box-shadow:
+    0 28px 54px rgba(2, 6, 23, 0.56),
+    0 0 0 1px rgba(99, 102, 241, 0.16);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  animation: purchasePopIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.termsModalBody {
+  display: grid;
+  gap: 10px;
+}
+
+.termsBlock {
+  border-radius: 12px;
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  background: rgba(15, 23, 42, 0.46);
+  padding: 11px 12px;
+  display: grid;
+  gap: 7px;
+}
+
+.termsBlock h4 {
+  margin: 0;
+  color: #fbbf24;
+  font-size: 0.96rem;
+  font-weight: 900;
+}
+
+.termsBlock p {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  line-height: 1.48;
+  white-space: pre-wrap;
+}
+
+.termsModalActions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 @keyframes purchaseFadeIn {
@@ -1811,6 +1893,12 @@
     white-space: normal;
   }
 
+  .termsButton {
+    height: 24px;
+    font-size: 0.64rem;
+    padding: 0 8px;
+  }
+
   .profileInfoIcon {
     width: 14px;
     height: 14px;
@@ -1858,6 +1946,12 @@
 
   .buyLink {
     font-size: 11px;
+  }
+
+  .termsModal {
+    width: min(100%, calc(100vw - 16px));
+    max-height: calc(100vh - 16px);
+    padding: 11px;
   }
 }
 

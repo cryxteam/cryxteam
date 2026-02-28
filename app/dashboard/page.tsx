@@ -24,6 +24,9 @@ type ProductRow = {
   provider_id: string | null
   name: string | null
   description: string | null
+  terms_and_conditions?: string | null
+  terms_conditions?: string | null
+  terms?: string | null
   delivery_mode: string | null
   account_type: string | null
   renewable: boolean | null
@@ -189,6 +192,7 @@ type ProviderProduct = {
   providerName: string
   name: string
   summary: string
+  termsAndConditions: string
   durationDays: number | null
   logo: string
   stock: number
@@ -275,6 +279,7 @@ type ProviderTicketDraft = {
 type ProviderFormState = {
   name: string
   summary: string
+  termsAndConditions: string
   logo: string
   durationDays: string
   profilesPerAccount: string
@@ -615,6 +620,7 @@ const AFFILIATE_REWARD_LEVELS: AffiliateRewardLevel[] = [
 const PROVIDER_FORM_DEFAULT: ProviderFormState = {
   name: '',
   summary: '',
+  termsAndConditions: '',
   logo: '',
   durationDays: '30',
   profilesPerAccount: '5',
@@ -3459,6 +3465,7 @@ export default function UserDashboardPage() {
     setProviderProductForm({
       name: product.name,
       summary: product.summary,
+      termsAndConditions: product.termsAndConditions,
       logo: product.logo,
       durationDays: product.durationDays === null ? '' : String(product.durationDays),
       profilesPerAccount: product.profilesPerAccount !== null ? String(product.profilesPerAccount) : '5',
@@ -3869,6 +3876,9 @@ export default function UserDashboardPage() {
           providerName: providerNameById.get(providerId) ?? 'Proveedor',
           name,
           summary: toText(row.description ?? row.summary ?? row.plan ?? row.duration) || 'Producto digital',
+          termsAndConditions: toText(
+            row.terms_and_conditions ?? row.terms_conditions ?? row.terms
+          ),
           durationDays: durationDays === null ? null : Math.max(1, Math.floor(durationDays)),
           logo: resolveProductLogo(name, row.logo_url ?? row.image_url ?? row.logo ?? row.image ?? row.icon),
           stock,
@@ -5489,6 +5499,7 @@ export default function UserDashboardPage() {
     const basePayloadCommon: Record<string, unknown> = {
       name,
       description: providerProductForm.summary.trim() || null,
+      terms_and_conditions: providerProductForm.termsAndConditions.trim() || null,
       image_url: providerProductForm.logo.trim() || null,
       price_guest: priceGuest,
       price_affiliate: priceAffiliate,
@@ -8529,6 +8540,21 @@ export default function UserDashboardPage() {
                           setProviderProductForm(previous => ({ ...previous, summary: event.target.value }))
                         }
                         placeholder='Describe tu producto y lo que incluye'
+                      />
+                    </label>
+
+                    <label className={styles.providerField}>
+                      <span>Terminos y condiciones</span>
+                      <textarea
+                        rows={3}
+                        value={providerProductForm.termsAndConditions}
+                        onChange={event =>
+                          setProviderProductForm(previous => ({
+                            ...previous,
+                            termsAndConditions: event.target.value,
+                          }))
+                        }
+                        placeholder='Ej: No compartir cuenta, uso personal, sin reembolsos por mal uso...'
                       />
                     </label>
 
