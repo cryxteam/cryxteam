@@ -1601,6 +1601,13 @@ export default function ProductsPage() {
                   >
                     {item.renewable ? 'Renovable' : 'No renovable'}
                   </span>
+                  <button
+                    type='button'
+                    className={styles.cardTermsBadge}
+                    onClick={() => openTermsModal(item)}
+                  >
+                    Terminos
+                  </button>
                   <span
                     className={`${styles.cardStockPill} ${
                       isBlockedByStock ? styles.cardStockPillEmpty : ''
@@ -1648,14 +1655,6 @@ export default function ProductsPage() {
                     {formatRenewable(item.renewable)} | {formatDuration(item.durationDays)}
                   </span>
                 </p>
-
-                <button
-                  type='button'
-                  className={styles.termsButton}
-                  onClick={() => openTermsModal(item)}
-                >
-                  Terminos
-                </button>
 
                 <div className={styles.cardPriceRow}>
                   <span className={styles.priceChip}>{formatPrice(displayPrice)}</span>
