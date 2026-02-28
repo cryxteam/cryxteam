@@ -1570,6 +1570,7 @@ export default function UserDashboardPage() {
   const [userOrderRenewFeedback, setUserOrderRenewFeedback] = useState<
     Record<string, UserOrderContactFeedback>
   >({})
+  const [userRenewConfirmOrderId, setUserRenewConfirmOrderId] = useState<string | null>(null)
   const [userOrderEditModal, setUserOrderEditModal] = useState<UserOrderEditModalState | null>(null)
   const [userSupportModal, setUserSupportModal] = useState<UserSupportModalState | null>(null)
   const [userSupportModalSaving, setUserSupportModalSaving] = useState(false)
@@ -2794,11 +2795,6 @@ export default function UserDashboardPage() {
       return
     }
 
-    const wantsRenew =
-      typeof window === 'undefined' ||
-      window.confirm(`Confirmar renovacion de ${order.productName}? Se descontara saldo de tu cuenta.`)
-    if (!wantsRenew) return
-
     setUserOrderRenewing(previous => ({ ...previous, [orderId]: true }))
     setUserOrderRenewFeedback(previous => {
       const next = { ...previous }
@@ -2953,12 +2949,17 @@ export default function UserDashboardPage() {
         ...previous,
         [orderId]: {
           type: 'ok',
-          text: `Renovado: ${formatMoney(renewalAmount)}. Proveedor recibe ${formatMoney(
-            Math.max(0, renewalAmount - commissionAmount)
-          )}.`,
+          text: 'renovado correctamente',
         },
       }))
+      setUserRenewConfirmOrderId(null)
       setOrdersReloadSeq(previous => previous + 1)
+      if (canSeeProvider && providerAccessGranted) {
+        void loadProviderDashboardData()
+        if (selectedProviderProduct && selectedProviderProduct.id === productId) {
+          void loadProviderProductInventory(selectedProviderProduct)
+        }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error desconocido.'
 
@@ -2979,6 +2980,14 @@ export default function UserDashboardPage() {
     } finally {
       setUserOrderRenewing(previous => ({ ...previous, [orderId]: false }))
     }
+  }
+
+  function openUserRenewConfirm(order: OwnedProduct) {
+    setUserRenewConfirmOrderId(order.id)
+  }
+
+  function closeUserRenewConfirm() {
+    setUserRenewConfirmOrderId(null)
   }
 
   function openUserSupportModal(order: OwnedProduct) {
@@ -3360,6 +3369,7 @@ export default function UserDashboardPage() {
     providerSelectedTicketId !== null ||
     providerBuyerModal !== null ||
     ownerDialogOpen ||
+    userRenewConfirmOrderId !== null ||
     userSupportModal !== null ||
     userOrderEditModal !== null
 
@@ -5403,12 +5413,10 @@ export default function UserDashboardPage() {
         }
       : extraFields
 
-    const basePayload: Record<string, unknown> = {
-      provider_id: userId,
+    const basePayloadCommon: Record<string, unknown> = {
       name,
       description: providerProductForm.summary.trim() || null,
       image_url: providerProductForm.logo.trim() || null,
-      stock_available: 0,
       price_guest: priceGuest,
       price_affiliate: priceAffiliate,
       price_logged: priceAffiliate,
@@ -5432,7 +5440,7 @@ export default function UserDashboardPage() {
 
     for (const accountTypeCandidate of accountTypeCandidates) {
       const payload = {
-        ...basePayload,
+        ...basePayloadCommon,
         account_type: accountTypeCandidate,
       }
       if (editingProviderProductId !== null) {
@@ -5447,7 +5455,12 @@ export default function UserDashboardPage() {
         }
         errorMessage = error.message
       } else {
-        const { error } = await supabase.from('products').insert(payload)
+        const createPayload = {
+          ...payload,
+          provider_id: userId,
+          stock_available: 0,
+        }
+        const { error } = await supabase.from('products').insert(createPayload)
         if (!error) {
           saved = true
           break
@@ -5478,6 +5491,14 @@ export default function UserDashboardPage() {
 
     setProviderMsgType('ok')
     setProviderMsg(editingProviderProductId ? 'Producto actualizado correctamente.' : 'Producto creado correctamente.')
+    if (editingProviderProductId !== null) {
+      const syncProviderId = providerProducts.find(item => item.id === editingProviderProductId)?.providerId || userId
+      await syncProviderProductStock({
+        id: editingProviderProductId,
+        providerId: syncProviderId,
+        accountType,
+      } as ProviderProduct)
+    }
     resetProviderProductForm()
     setShowProviderProductForm(false)
     setShowProviderProfilesModal(false)
@@ -8166,7 +8187,7 @@ export default function UserDashboardPage() {
                   )}
 
                   {!isAffiliateMembersLoading && affiliateMembers.length > 0 && !showAffiliateMembersList && (
-                    <p className={styles.panelEmpty}>Lista oculta. Pulsa "Mostrar" para verla.</p>
+                    <p className={styles.panelEmpty}>Lista oculta. Pulsa &quot;Mostrar&quot; para verla.</p>
                   )}
                 </section>
               </header>
@@ -11436,6 +11457,9 @@ export default function UserDashboardPage() {
   const userSupportModalOrder = userSupportModal
     ? ownedProducts.find(order => order.id === userSupportModal.orderId) ?? null
     : null
+  const userRenewConfirmOrder = userRenewConfirmOrderId
+    ? ownedProducts.find(order => order.id === userRenewConfirmOrderId) ?? null
+    : null
 
   return (
     <main className={styles.page}>
@@ -11869,7 +11893,7 @@ export default function UserDashboardPage() {
                                         type='button'
                                         className={styles.userRenewButton}
                                         disabled={!canRenewOrder || isRenewingOrder}
-                                        onClick={() => void handleUserRenewOrder(order)}
+                                        onClick={() => openUserRenewConfirm(order)}
                                       >
                                         {isRenewingOrder ? 'Renovando...' : 'Renovar'}
                                       </button>
@@ -12084,6 +12108,44 @@ export default function UserDashboardPage() {
                 }}
               >
                 {userOrderEditSaving ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </article>
+        </div>
+      )}
+
+      {userRenewConfirmOrder && (
+        <div className={styles.userOrderEditBackdrop} role='dialog' aria-modal='true'>
+          <article className={styles.userOrderEditCard}>
+            <button
+              type='button'
+              className={styles.userOrderEditClose}
+              onClick={closeUserRenewConfirm}
+              aria-label='Cerrar'
+            >
+              X
+            </button>
+
+            <h4 className={styles.userOrderEditTitle}>Confirmar renovacion</h4>
+            <p className={styles.userOrderEditSubtitle}>
+              {userRenewConfirmOrder.productName} · Pedido #{userRenewConfirmOrder.id}
+            </p>
+
+            <p className={styles.panelDescription}>
+              Se descontara saldo de tu cuenta y se extendera la vigencia del servicio.
+            </p>
+
+            <div className={styles.userOrderEditActions}>
+              <button type='button' className={styles.userOrderEditGhost} onClick={closeUserRenewConfirm}>
+                Cancelar
+              </button>
+              <button
+                type='button'
+                className={styles.userOrderEditSave}
+                disabled={Boolean(userOrderRenewing[userRenewConfirmOrder.id])}
+                onClick={() => void handleUserRenewOrder(userRenewConfirmOrder)}
+              >
+                {userOrderRenewing[userRenewConfirmOrder.id] ? 'Renovando...' : 'Confirmar'}
               </button>
             </div>
           </article>
