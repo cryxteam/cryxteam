@@ -537,7 +537,7 @@ export default function InicioPage() {
 
         <section id='productos-destacados' className={styles.featuredSection}>
           <header className={styles.sectionHead}>
-            <h3>Productos destacados</h3>
+            <h3>Productos destacados 🔥</h3>
             <div className={styles.sectionHeadRight}>
               {isLoggedIn && !isAffiliateEnabled && (
                 <span className={styles.sectionHint}>Activa afiliacion para precio distribuidor.</span>
