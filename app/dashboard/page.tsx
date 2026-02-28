@@ -1649,6 +1649,9 @@ export default function UserDashboardPage() {
   const [providerOrderSaving, setProviderOrderSaving] = useState<Record<string, boolean>>({})
   const [providerTicketDrafts, setProviderTicketDrafts] = useState<Record<string, ProviderTicketDraft>>({})
   const [providerTicketSaving, setProviderTicketSaving] = useState<Record<string, boolean>>({})
+  const providerNotifyAudioRef = useRef<HTMLAudioElement | null>(null)
+  const providerNotifyIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const providerNotifyLastCountRef = useRef(0)
   const providerImageInputRef = useRef<HTMLInputElement | null>(null)
   const providerAvatarInputRef = useRef<HTMLInputElement | null>(null)
   const [isProviderAvatarUploading, setIsProviderAvatarUploading] = useState(false)
@@ -4217,6 +4220,26 @@ export default function UserDashboardPage() {
     if (!providerSelectedTicketId) return null
     return providerTicketsLive.find(ticket => String(ticket.id) === providerSelectedTicketId) ?? null
   }, [providerTicketsLive, providerSelectedTicketId])
+  const providerPendingAlertsCount = providerOrdersLive.length + providerTicketsLive.length
+
+  const playProviderNotificationSound = useCallback(() => {
+    if (typeof window === 'undefined' || typeof Audio === 'undefined') return
+    if (!providerNotifyAudioRef.current) {
+      const audio = new Audio('/notificacion.mp3')
+      audio.preload = 'auto'
+      audio.volume = 1
+      providerNotifyAudioRef.current = audio
+    }
+
+    const audio = providerNotifyAudioRef.current
+    if (!audio) return
+    if (document.visibilityState !== 'visible') return
+
+    audio.currentTime = 0
+    void audio.play().catch(() => {
+      // Puede fallar si el navegador aún no permite autoplay.
+    })
+  }, [])
 
   const providerSalesTotalMetric = useMemo(() => {
     return providerOrders.reduce((sum, order) => {
@@ -7752,6 +7775,45 @@ export default function UserDashboardPage() {
     loadProviderProductInventory,
     providerAccessGranted,
     selectedProviderProduct,
+  ])
+
+  useEffect(() => {
+    if (providerNotifyIntervalRef.current) {
+      clearInterval(providerNotifyIntervalRef.current)
+      providerNotifyIntervalRef.current = null
+    }
+
+    const hasPending = providerPendingAlertsCount > 0
+    const inProviderSection = currentSectionId === 'proveedor' && providerAccessGranted
+
+    if (!inProviderSection || !hasPending) {
+      providerNotifyLastCountRef.current = providerPendingAlertsCount
+      return
+    }
+
+    if (
+      providerNotifyLastCountRef.current === 0 ||
+      providerPendingAlertsCount > providerNotifyLastCountRef.current
+    ) {
+      playProviderNotificationSound()
+    }
+    providerNotifyLastCountRef.current = providerPendingAlertsCount
+
+    providerNotifyIntervalRef.current = setInterval(() => {
+      playProviderNotificationSound()
+    }, 8000)
+
+    return () => {
+      if (providerNotifyIntervalRef.current) {
+        clearInterval(providerNotifyIntervalRef.current)
+        providerNotifyIntervalRef.current = null
+      }
+    }
+  }, [
+    currentSectionId,
+    providerAccessGranted,
+    providerPendingAlertsCount,
+    playProviderNotificationSound,
   ])
 
   useEffect(() => {
