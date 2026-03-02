@@ -2113,27 +2113,116 @@ export default function UserDashboardPage() {
           const providerById = new Map<string, { username: string; phone: string }>()
 
           if (providerIds.length > 0) {
-            const { data, error } = await supabase.from('profiles').select('*').in('id', providerIds)
+            const { data: publicProviderRows, error: publicProviderError } = await supabase.rpc(
+              'get_public_profile_cards',
+              { p_profile_ids: providerIds }
+            )
 
             if (!mounted) return
 
-            if (error) {
-              errors.push('No se pudo cargar el nombre de algunos proveedores.')
-            } else {
-              for (const provider of (data ?? []) as Array<Record<string, unknown>>) {
+            if (!publicProviderError && Array.isArray(publicProviderRows)) {
+              for (const provider of publicProviderRows as Array<Record<string, unknown>>) {
                 const providerId = toText(provider.id)
                 if (!providerId) continue
 
-                const providerPhone =
-                  toText(provider.phone_e164) ||
-                  toText(provider.phone) ||
-                  toText(provider.celular) ||
-                  toText(provider.whatsapp)
+                const rawPhone = pickRowText(provider, [
+                  'phone_e164',
+                  'phone',
+                  'phone_number',
+                  'whatsapp',
+                  'whatsapp_phone',
+                  'whatsapp_number',
+                  'mobile',
+                  'celular',
+                  'telefono',
+                  'telefono_whatsapp',
+                  'numero',
+                  'numero_whatsapp',
+                  'contact_phone',
+                ])
+                const phoneCode = pickRowText(provider, [
+                  'country_dial',
+                  'phone_code',
+                  'dial_code',
+                  'country_dial_code',
+                  'country_prefix',
+                ])
+                let providerPhone = rawPhone
+                if (
+                  providerPhone &&
+                  phoneCode &&
+                  !providerPhone.startsWith('+') &&
+                  !providerPhone.startsWith('00')
+                ) {
+                  const digits = providerPhone.replace(/\D+/g, '')
+                  if (digits.length > 0 && digits.length <= 10) {
+                    providerPhone = `${phoneCode}${providerPhone}`
+                  }
+                }
 
                 providerById.set(providerId, {
-                  username: toText(provider.username) || 'Proveedor',
+                  username: normalizeDisplayName(provider.username) || pickDisplayName(provider) || 'Proveedor',
                   phone: providerPhone,
                 })
+              }
+            }
+
+            const missingProviderIds = providerIds.filter(id => !providerById.has(id))
+            if (missingProviderIds.length > 0) {
+              const { data: fallbackRows, error: fallbackError } = await supabase
+                .from('profiles')
+                .select('*')
+                .in('id', missingProviderIds)
+
+              if (!mounted) return
+
+              if (fallbackError && providerById.size === 0) {
+                errors.push('No se pudo cargar el nombre de algunos proveedores.')
+              } else {
+                for (const provider of (fallbackRows ?? []) as Array<Record<string, unknown>>) {
+                  const providerId = toText(provider.id)
+                  if (!providerId) continue
+
+                  const rawPhone = pickRowText(provider, [
+                    'phone_e164',
+                    'phone',
+                    'phone_number',
+                    'whatsapp',
+                    'whatsapp_phone',
+                    'whatsapp_number',
+                    'mobile',
+                    'celular',
+                    'telefono',
+                    'telefono_whatsapp',
+                    'numero',
+                    'numero_whatsapp',
+                    'contact_phone',
+                  ])
+                  const phoneCode = pickRowText(provider, [
+                    'country_dial',
+                    'phone_code',
+                    'dial_code',
+                    'country_dial_code',
+                    'country_prefix',
+                  ])
+                  let providerPhone = rawPhone
+                  if (
+                    providerPhone &&
+                    phoneCode &&
+                    !providerPhone.startsWith('+') &&
+                    !providerPhone.startsWith('00')
+                  ) {
+                    const digits = providerPhone.replace(/\D+/g, '')
+                    if (digits.length > 0 && digits.length <= 10) {
+                      providerPhone = `${phoneCode}${providerPhone}`
+                    }
+                  }
+
+                  providerById.set(providerId, {
+                    username: normalizeDisplayName(provider.username) || pickDisplayName(provider) || 'Proveedor',
+                    phone: providerPhone,
+                  })
+                }
               }
             }
           }
@@ -2142,8 +2231,27 @@ export default function UserDashboardPage() {
             const product = order.product_id !== null ? productById.get(String(order.product_id)) : undefined
             const providerId = order.provider_id ?? product?.provider_id ?? ''
             const providerInfo = providerById.get(providerId)
-            const providerName = providerInfo?.username ?? 'Proveedor'
-            const providerPhone = providerInfo?.phone ?? ''
+            const providerNameFromProduct =
+              product && typeof product === 'object'
+                ? pickRowText(product as Record<string, unknown>, [
+                    'provider_username',
+                    'provider_name',
+                    'seller_name',
+                  ])
+                : ''
+            const providerPhoneFromProduct =
+              product && typeof product === 'object'
+                ? pickRowText(product as Record<string, unknown>, [
+                    'provider_phone',
+                    'provider_whatsapp',
+                    'whatsapp',
+                    'phone_e164',
+                    'phone',
+                    'celular',
+                  ])
+                : ''
+            const providerName = providerInfo?.username || providerNameFromProduct || 'Proveedor'
+            const providerPhone = providerInfo?.phone || providerPhoneFromProduct || ''
             const productName = toText(product?.name) || 'Producto sin nombre'
             const slotInfo = toText(order.inventory_slot_id)
               ? slotInfoById.get(toText(order.inventory_slot_id))
