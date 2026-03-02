@@ -2167,12 +2167,16 @@ export default function UserDashboardPage() {
               }
             }
 
-            const missingProviderIds = providerIds.filter(id => !providerById.has(id))
-            if (missingProviderIds.length > 0) {
+            const providerNeedsFallbackIds = providerIds.filter(id => {
+              const entry = providerById.get(id)
+              if (!entry) return true
+              return normalizeWhatsappPhone(entry.phone).length === 0
+            })
+            if (providerNeedsFallbackIds.length > 0) {
               const { data: fallbackRows, error: fallbackError } = await supabase
                 .from('profiles')
                 .select('*')
-                .in('id', missingProviderIds)
+                .in('id', providerNeedsFallbackIds)
 
               if (!mounted) return
 
@@ -2218,9 +2222,14 @@ export default function UserDashboardPage() {
                     }
                   }
 
+                  const current = providerById.get(providerId)
                   providerById.set(providerId, {
-                    username: normalizeDisplayName(provider.username) || pickDisplayName(provider) || 'Proveedor',
-                    phone: providerPhone,
+                    username:
+                      normalizeDisplayName(provider.username) ||
+                      pickDisplayName(provider) ||
+                      current?.username ||
+                      'Proveedor',
+                    phone: providerPhone || current?.phone || '',
                   })
                 }
               }
