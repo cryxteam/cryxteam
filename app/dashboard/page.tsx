@@ -1236,6 +1236,15 @@ function isMissingTableError(message: string) {
   )
 }
 
+function isDuplicateInventoryLoginConstraintError(message: string) {
+  const text = message.toLowerCase()
+  return (
+    text.includes('inventory_accounts_unique_login_per_product_idx') ||
+    text.includes('duplicate key value violates unique constraint') ||
+    (text.includes('duplicate key') && text.includes('inventory_accounts'))
+  )
+}
+
 function pickRowText(row: Record<string, unknown>, keys: readonly string[]) {
   for (const key of keys) {
     const raw = row[key]
@@ -1581,6 +1590,10 @@ export default function UserDashboardPage() {
   const [userOrderContactFeedback, setUserOrderContactFeedback] = useState<
     Record<string, UserOrderContactFeedback>
   >({})
+  const [userOrderEmailExpanded, setUserOrderEmailExpanded] = useState<Record<string, boolean>>({})
+  const [userOrderEmailFeedback, setUserOrderEmailFeedback] = useState<
+    Record<string, UserOrderContactFeedback>
+  >({})
   const [userOrderRenewing, setUserOrderRenewing] = useState<Record<string, boolean>>({})
   const [userOrderRenewFeedback, setUserOrderRenewFeedback] = useState<
     Record<string, UserOrderContactFeedback>
@@ -1775,6 +1788,8 @@ export default function UserDashboardPage() {
       setUserTicketFeedback({})
       setUserOrderContactSaving({})
       setUserOrderContactFeedback({})
+      setUserOrderEmailExpanded({})
+      setUserOrderEmailFeedback({})
       setUserOrderRenewing({})
       setUserOrderRenewFeedback({})
       setUserOrderEditModal(null)
@@ -3418,6 +3433,38 @@ export default function UserDashboardPage() {
     return buildWhatsappUrl(providerPhone, text)
   }
 
+  function toggleUserOrderEmailExpanded(orderId: string) {
+    setUserOrderEmailExpanded(previous => ({
+      ...previous,
+      [orderId]: !previous[orderId],
+    }))
+  }
+
+  async function copyUserOrderEmail(orderId: string, emailValue: string) {
+    const value = emailValue.trim()
+    if (!value || value === '-') return
+    try {
+      await navigator.clipboard.writeText(value)
+      setUserOrderEmailFeedback(previous => ({
+        ...previous,
+        [orderId]: { type: 'ok', text: 'Correo copiado.' },
+      }))
+      window.setTimeout(() => {
+        setUserOrderEmailFeedback(previous => {
+          if (!previous[orderId]) return previous
+          const next = { ...previous }
+          delete next[orderId]
+          return next
+        })
+      }, 1600)
+    } catch {
+      setUserOrderEmailFeedback(previous => ({
+        ...previous,
+        [orderId]: { type: 'error', text: 'No se pudo copiar.' },
+      }))
+    }
+  }
+
   async function handleAffiliateSubmit() {
     const target = affiliateUsername.trim()
     if (!target) {
@@ -5029,13 +5076,10 @@ export default function UserDashboardPage() {
 
       if (insertAccountsError) {
         setIsProviderInventorySaving(false)
-        const duplicateByProfile = insertAccountsError.message.toLowerCase().includes(
-          'inventory_accounts_unique_login_per_product_idx'
-        )
-        if (isProfilesProduct && duplicateByProfile) {
+        if (isDuplicateInventoryLoginConstraintError(insertAccountsError.message)) {
           setProviderInventoryMsgType('error')
           setProviderInventoryMsg(
-            'Tu DB aún bloquea perfiles separados por login único. Ejecuta SQL para quitar ese índice único y vuelve a intentar.'
+            'Tu DB aun bloquea login/correo repetido por producto. Quita el indice unico inventory_accounts_unique_login_per_product_idx y vuelve a intentar.'
           )
           return
         }
@@ -5891,6 +5935,13 @@ export default function UserDashboardPage() {
     if (accountInsertError) {
       setProviderOrderSaving(previous => ({ ...previous, [key]: false }))
       setProviderMsgType('error')
+      if (isDuplicateInventoryLoginConstraintError(accountInsertError.message)) {
+        setProviderMsg(
+          `Pedido #${order.id} entregado, pero tu DB aun bloquea login/correo repetido por producto (inventory_accounts_unique_login_per_product_idx).`
+        )
+        await loadProviderDashboardData()
+        return
+      }
       setProviderMsg(
         `Pedido #${order.id} entregado, pero no se pudo guardar credenciales en inventario. ${accountInsertError.message}`
       )
@@ -11964,6 +12015,8 @@ export default function UserDashboardPage() {
                               const credentialsVisible = Boolean(visibleCredentials[order.id])
                               const credentialInfo = resolveOrderCredentialForMessage(order)
                               const usernameValue = credentialInfo.emailValue
+                              const isEmailExpanded = Boolean(userOrderEmailExpanded[order.id])
+                              const emailFeedback = userOrderEmailFeedback[order.id]
                               const profileNumberValue = credentialInfo.profileValue
                               const pinValue = credentialInfo.pinValue
                               const passwordValue =
@@ -12030,7 +12083,41 @@ export default function UserDashboardPage() {
                                       </button>
                                     </div>
                                   </td>
-                                  <td data-label='CORREO'>{usernameValue}</td>
+                                  <td data-label='CORREO'>
+                                    <div className={styles.userCellStack}>
+                                      <button
+                                        type='button'
+                                        className={`${styles.userCorreoValue} ${
+                                          isEmailExpanded ? styles.userCorreoValueExpanded : ''
+                                        }`}
+                                        onClick={() => toggleUserOrderEmailExpanded(order.id)}
+                                        title={isEmailExpanded ? 'Ocultar contenido' : 'Ver contenido completo'}
+                                      >
+                                        {usernameValue}
+                                      </button>
+                                      <div className={styles.userCellActionsRow}>
+                                        <button
+                                          type='button'
+                                          className={styles.userIconButton}
+                                          title='Copiar correo'
+                                          aria-label='Copiar correo'
+                                          onClick={() => void copyUserOrderEmail(order.id, usernameValue)}
+                                          disabled={!usernameValue || usernameValue === '-'}
+                                        >
+                                          📋
+                                        </button>
+                                      </div>
+                                      {emailFeedback && (
+                                        <span
+                                          className={
+                                            emailFeedback.type === 'ok' ? styles.userInlineOk : styles.userInlineError
+                                          }
+                                        >
+                                          {emailFeedback.text}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
                                   <td data-label='CONTRASEÑA'>
                                     <div className={styles.userPasswordCell}>
                                       <span>{passwordValue}</span>
