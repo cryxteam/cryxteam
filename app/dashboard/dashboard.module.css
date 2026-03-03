@@ -7940,7 +7940,7 @@
   .providerTicketList {
     max-height: min(62vh, 560px);
     padding-right: 0;
-    padding-bottom: 2px;
+    padding-bottom: 90px;
   }
 
   .providerInventoryToolbar {
@@ -7994,6 +7994,8 @@
     border-radius: 12px;
     padding: 8px;
     gap: 8px;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .providerProductCardMain {
@@ -8001,6 +8003,28 @@
     column-gap: 8px;
     row-gap: 8px;
     align-items: start;
+    min-width: 0;
+    max-height: min(58vh, 320px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
+  .providerProductCardMain::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .providerProductCardMain::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.72);
+    border-radius: 999px;
+  }
+
+  .providerProductCardMain::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.52);
+    border-radius: 999px;
   }
 
   .providerProductThumbWrap {
@@ -8012,6 +8036,7 @@
 
   .providerProductCardBody {
     gap: 6px;
+    min-width: 0;
   }
 
   .providerProductHead strong {
@@ -8030,11 +8055,12 @@
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-x;
+    touch-action: pan-x pan-y;
     overscroll-behavior-x: contain;
     padding-bottom: 3px;
     margin-right: -2px;
     gap: 6px;
+    min-width: 0;
   }
 
   .providerProductPriceRow::-webkit-scrollbar,
@@ -8064,7 +8090,7 @@
   .providerProductQuickActions {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: 44px minmax(0, 1fr);
     gap: 8px;
     align-items: center;
     justify-items: stretch;
