@@ -160,6 +160,7 @@ function detectCategory(name: string): CategoryKey {
     normalized.includes('xbox') ||
     normalized.includes('playstation') ||
     normalized.includes('steam') ||
+    normalized.includes('freefire') ||
     normalized.includes('game')
   ) {
     return 'gaming'
@@ -173,7 +174,11 @@ function detectCategory(name: string): CategoryKey {
     normalized.includes('perplexity') ||
     normalized.includes('office') ||
     normalized.includes('software') ||
+    normalized.includes('windows') ||
+    normalized.includes('antivirus') ||
+    normalized.includes('vegas') ||
     normalized.includes('licencia')
+
   ) {
     return 'software'
   }
