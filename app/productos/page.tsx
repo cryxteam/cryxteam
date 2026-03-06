@@ -131,6 +131,18 @@ function detectCategory(name: string): CategoryKey {
     normalized.includes('youtube') ||
     normalized.includes('iptv') ||
     normalized.includes('viki') ||
+normalized.includes('crunchyroll') ||
+normalized.includes('magis') ||
+normalized.includes('plex') ||
+normalized.includes('') ||
+normalized.includes('directvgo') ||
+    normalized.includes('oleada') ||
+normalized.includes('telelatino') ||
+    normalized.includes('paramount') ||
+normalized.includes('universal') ||
+    normalized.includes('net') ||
+normalized.includes('max') ||
+    normalized.includes('vix') ||
     normalized.includes('hulu')
   ) {
     return 'streaming'
