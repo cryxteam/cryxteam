@@ -4268,10 +4268,7 @@ export default function UserDashboardPage() {
       const creditedSalesTotal = normalizedOrders.reduce((sum, order) => {
         return shouldCountProviderSale(order.status, order.deliveryMode) ? sum + Math.max(0, order.amount) : sum
       }, 0)
-      const effectiveProviderBalance =
-        providerBalanceValue > 0 || creditedSalesTotal <= 0
-          ? providerBalanceValue
-          : creditedSalesTotal
+      const effectiveProviderBalance = providerBalanceValue
 
       setProviderProducts(normalizedProducts)
       setProviderOrders(normalizedOrders)
