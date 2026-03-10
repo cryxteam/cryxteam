@@ -2840,6 +2840,7 @@ export default function UserDashboardPage() {
     channel
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `buyer_id=eq.${userId}` }, scheduleOrdersReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets', filter: `buyer_id=eq.${userId}` }, scheduleOrdersReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ticket_messages' }, scheduleOrdersReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, scheduleOrdersReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, scheduleProfileReload)
       .on(
@@ -3368,6 +3369,7 @@ export default function UserDashboardPage() {
         ...previous,
         [ticket.id]: { type: 'ok', text: 'Ticket confirmado. La cuenta vuelve a Mis productos.' },
       }))
+      setUserTicketModal(null)
       setOrdersReloadSeq(previous => previous + 1)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error desconocido'
