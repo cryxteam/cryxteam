@@ -4560,27 +4560,20 @@ export default function UserDashboardPage() {
     return providerNotifyAudioRef.current
   }, [])
 
-  const playProviderNotificationSound = useCallback(
-    (options?: { allowHidden?: boolean }) => {
-      const audio = ensureProviderNotifyAudio()
-      if (!audio) return
+  const playProviderNotificationSound = useCallback(() => {
+    const audio = ensureProviderNotifyAudio()
+    if (!audio) return
 
-      const visibilityState = typeof document !== 'undefined' ? document.visibilityState : 'visible'
-      const isHidden = visibilityState !== 'visible'
+    const isHidden = typeof document !== 'undefined' ? document.visibilityState !== 'visible' : false
 
-      if (isHidden && !options?.allowHidden) return
-      if (isHidden) {
-        if (isMobile) return
-        if (!providerSoundEnabledRef.current) return
-      }
+    // Cuando la pestaña está oculta se requiere que el usuario haya interactuado para no chocar con autoplay.
+    if (isHidden && !providerSoundEnabledRef.current) return
 
-      audio.currentTime = 0
-      void audio.play().catch(() => {
-        // Puede fallar si el navegador aún no permite autoplay.
-      })
-    },
-    [ensureProviderNotifyAudio, isMobile]
-  )
+    audio.currentTime = 0
+    void audio.play().catch(() => {
+      // Puede fallar si el navegador aún no permite autoplay.
+    })
+  }, [ensureProviderNotifyAudio])
 
   // Habilita el audio una vez que el usuario interactúa para evitar bloqueos de autoplay en segundo plano.
   useEffect(() => {
@@ -4589,8 +4582,6 @@ export default function UserDashboardPage() {
     const handleUserInteraction = () => {
       if (providerSoundEnabledRef.current) return
       providerSoundEnabledRef.current = true
-
-      if (isMobile) return
 
       const audio = ensureProviderNotifyAudio()
       if (!audio) return
@@ -8061,7 +8052,7 @@ export default function UserDashboardPage() {
 
       if (typeof document !== 'undefined' && document.hidden && (tableName === 'orders' || tableName === 'tickets')) {
         // Sonido corto cuando llegan pedidos/tickets y la pestaña está oculta.
-        playProviderNotificationSound({ allowHidden: true })
+        playProviderNotificationSound()
       }
 
       scheduleReload()
