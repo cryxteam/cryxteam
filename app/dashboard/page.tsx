@@ -1611,7 +1611,6 @@ export default function UserDashboardPage() {
   const [userTicketModal, setUserTicketModal] = useState<ResolvedTicket | null>(null)
   const pushRegisteringRef = useRef(false)
   const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>('default')
-  const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>('default')
   const [visibleCredentials, setVisibleCredentials] = useState<Record<string, boolean>>({})
   const [userOrderContactSaving, setUserOrderContactSaving] = useState<Record<string, boolean>>({})
   const [userOrderContactFeedback, setUserOrderContactFeedback] = useState<
