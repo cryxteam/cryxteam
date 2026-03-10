@@ -139,6 +139,7 @@ type OwnedProduct = {
 type ResolvedTicket = {
   id: string
   productName: string
+  providerName: string
   productLogo: string
   orderId: string
   subject: string
@@ -2464,9 +2465,16 @@ export default function UserDashboardPage() {
 
           const normalizedTickets = ticketRows.map<ResolvedTicket>(ticket => {
               const product = ticket.product_id !== null ? productById.get(String(ticket.product_id)) : undefined
+              const providerId = toText(ticket.provider_id)
+              const providerInfo = providerId ? providerById.get(providerId) : undefined
+              const providerNameFromProduct =
+                product && typeof product === 'object'
+                  ? pickRowText(product as Record<string, unknown>, ['provider_username', 'provider_name', 'seller_name'])
+                  : ''
               return {
                 id: String(ticket.id),
                 productName: toText(product?.name) || 'Producto no disponible',
+                providerName: providerInfo?.username || providerNameFromProduct || 'Proveedor',
                 productLogo:
                   pickRowText(product ?? {}, ['logo', 'logo_url', 'image_url', 'image', 'icon']) || '/logo-mark.png',
                 orderId: ticket.order_id !== null ? String(ticket.order_id) : '-',
@@ -6134,7 +6142,7 @@ export default function UserDashboardPage() {
     })
   }
 
-  async function handleProviderTicketSave(ticket: ProviderTicket) {
+  async function handleProviderTicketSave(ticket: ProviderTicket, forceResolve = false) {
     const key = String(ticket.id)
     const draft = providerTicketDrafts[key] ?? {
       status: ticket.status,
@@ -6146,7 +6154,7 @@ export default function UserDashboardPage() {
       profilePin: ticket.credentialProfilePin,
     }
 
-    const normalizedStatus = draft.status.trim().toLowerCase() || 'open'
+    const normalizedStatus = forceResolve ? 'resolved' : draft.status.trim().toLowerCase() || 'open'
     const isProfilesTicket = isProfilesAccountType(ticket.orderAccountType)
     const currentLoginUser = ticket.credentialLoginUser.trim()
     const currentLoginPassword = ticket.credentialLoginPassword.trim()
@@ -9927,6 +9935,30 @@ export default function UserDashboardPage() {
                           } (${providerSelectedTicket.productName}).`
                         )
                         const whatsappHref = clientPhone ? `https://wa.me/${clientPhone}?text=${whatsappText}` : ''
+                        const currentLoginUser = providerSelectedTicket.credentialLoginUser.trim()
+                        const currentLoginPassword = providerSelectedTicket.credentialLoginPassword.trim()
+                        const currentProfileLabel = providerSelectedTicket.credentialProfileLabel.trim()
+                        const currentProfilePin = providerSelectedTicket.credentialProfilePin.trim()
+                        const nextLoginUser = draft.loginUser.trim() || currentLoginUser
+                        const nextLoginPassword = draft.loginPassword.trim() || currentLoginPassword
+                        const nextProfileLabel = draft.profileLabel.trim() || currentProfileLabel
+                        const nextProfilePin = draft.profilePin.trim() || currentProfilePin
+                        const changedCredentialFields: string[] = []
+                        if (providerSelectedTicket.orderId !== null) {
+                          if (nextLoginUser !== currentLoginUser) changedCredentialFields.push('correo/login')
+                          if (nextLoginPassword !== currentLoginPassword) changedCredentialFields.push('contrasena')
+                          if (isProfilesTicket && nextProfileLabel !== currentProfileLabel) changedCredentialFields.push('perfil')
+                          if (isProfilesTicket && nextProfilePin !== currentProfilePin) changedCredentialFields.push('PIN')
+                        }
+                        const autoResolutionDetail =
+                          changedCredentialFields.length > 0
+                            ? `Credenciales actualizadas: ${changedCredentialFields.join(', ')}.`
+                            : ''
+                        const detailPreview =
+                          draft.resolutionDetail.trim() ||
+                          providerSelectedTicket.resolutionDetail ||
+                          autoResolutionDetail ||
+                          'Sin cambios adicionales.'
 
                         return (
                           <div className={styles.providerOrderModalBackdrop} role='presentation'>
@@ -9977,7 +10009,9 @@ export default function UserDashboardPage() {
                                   </span>
                                   <span>🧪 Nombre cliente final: {providerSelectedTicket.customerName || '-'}</span>
                                   <span>📞 Telefono cliente final: {providerSelectedTicket.customerPhone || '-'}</span>
-                                  <span>💬 Extra cliente final: {providerSelectedTicket.customerExtra || '-'}</span>
+                                  {providerSelectedTicket.customerExtra && (
+                                    <span>💬 Extra cliente final: {providerSelectedTicket.customerExtra}</span>
+                                  )}
                                 </div>
 
                                 <div className={styles.providerOrderModalActions}>
@@ -9999,48 +10033,30 @@ export default function UserDashboardPage() {
                                 </div>
 
                                 <div className={styles.providerTicketFormGrid}>
-                                  <label className={styles.providerField}>
+                                  <div className={styles.providerField}>
                                     <span>Estado</span>
-                                    <select
-                                      value={draft.status}
-                                      onChange={event =>
-                                        handleProviderTicketDraftChange(providerSelectedTicket.id, {
-                                          status: event.target.value,
-                                        })
-                                      }
-                                    >
-                                      <option value='open'>Abierto</option>
-                                      <option value='in_progress'>En proceso</option>
-                                      <option value='resolved'>Resuelto</option>
-                                    </select>
-                                  </label>
+                                    <div className={styles.providerTicketStatusReadonly}>
+                                      {formatOrderStatus(providerSelectedTicket.status)}
+                                    </div>
+                                  </div>
 
                                   <label className={styles.providerField}>
                                     <span>Resumen resolucion</span>
-                                    <input
-                                      type='text'
+                                    <textarea
                                       value={draft.resolutionSummary}
                                       onChange={event =>
                                         handleProviderTicketDraftChange(providerSelectedTicket.id, {
                                           resolutionSummary: event.target.value,
                                         })
                                       }
-                                      placeholder='Que se hizo'
+                                      placeholder='Describe brevemente la solucion aplicada'
+                                      rows={3}
                                     />
                                   </label>
 
                                   <label className={styles.providerField}>
-                                    <span>Detalle</span>
-                                    <input
-                                      type='text'
-                                      value={draft.resolutionDetail}
-                                      onChange={event =>
-                                        handleProviderTicketDraftChange(providerSelectedTicket.id, {
-                                          resolutionDetail: event.target.value,
-                                        })
-                                      }
-                                      placeholder='Cambios aplicados'
-                                    />
+                                    <span>Detalle (auto)</span>
+                                    <textarea value={detailPreview} readOnly rows={3} />
                                   </label>
 
                                   {hasLinkedOrder && (
@@ -10111,12 +10127,12 @@ export default function UserDashboardPage() {
                                 <div className={styles.providerActionRow}>
                                   <button
                                     type='button'
-                                    onClick={() => void handleProviderTicketSave(providerSelectedTicket)}
+                                    onClick={() => void handleProviderTicketSave(providerSelectedTicket, true)}
                                     disabled={Boolean(providerTicketSaving[String(providerSelectedTicket.id)])}
                                   >
                                     {providerTicketSaving[String(providerSelectedTicket.id)]
-                                      ? 'Guardando...'
-                                      : 'Guardar ticket'}
+                                      ? 'Resolviendo...'
+                                      : 'Resolver ticket'}
                                   </button>
                                 </div>
                               </div>
@@ -12329,6 +12345,7 @@ export default function UserDashboardPage() {
                               <div className={styles.providerTicketStripBody}>
                                 <strong className={styles.providerOrderStripTitle}>{ticket.subject}</strong>
                                 <span className={styles.providerOrderStripLine}>📦 {ticket.productName}</span>
+                                <span className={styles.providerOrderStripLine}>👤 {ticket.providerName}</span>
                                 <span className={styles.providerOrderStripLine}>🧾 Ticket #{ticket.id} · Compra {ticket.orderId}</span>
                                 <span className={styles.providerOrderStripLine}>
                                   🕑 Ultima: {formatDate(ticket.updatedAt)} · Resuelto: {formatDate(ticket.resolvedAt)}
