@@ -1417,21 +1417,6 @@ function truncateText(text: string, max: number) {
   return `${text.slice(0, max - 1)}…`
 }
 
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const rawData = atob(base64)
-  const outputArray = new Uint8Array(rawData.length)
-  for (let i = 0; i < rawData.length; i += 1) {
-    outputArray[i] = rawData.charCodeAt(i)
-  }
-  return outputArray
-}
-
-function bufferToBase64(buffer: ArrayBuffer) {
-  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
-}
-
 function extractInventoryProfileSuffix(loginRaw: string) {
   const match = loginRaw.match(/::slot_[^:]+::([^:]+)$/i)
   return match ? match[1] : ''
@@ -1591,6 +1576,15 @@ function isPendingLikeOrderStatus(statusRaw: string) {
 export default function UserDashboardPage() {
   const router = useRouter()
   const pathname = usePathname()
+  const isMobile = useMemo(() => {
+    if (typeof navigator === 'undefined') return false
+    const ua = navigator.userAgent || ''
+    const coarsePointer =
+      typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? window.matchMedia('(pointer:coarse)').matches
+        : false
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || coarsePointer
+  }, [])
   const [profile, setProfile] = useState<ProfileRow | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -1609,8 +1603,6 @@ export default function UserDashboardPage() {
   const [userTicketFeedback, setUserTicketFeedback] = useState<Record<string, UserOrderContactFeedback>>({})
   const [userTicketExpanded, setUserTicketExpanded] = useState<Record<string, boolean>>({})
   const [userTicketModal, setUserTicketModal] = useState<ResolvedTicket | null>(null)
-  const pushRegisteringRef = useRef(false)
-  const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>('default')
   const [visibleCredentials, setVisibleCredentials] = useState<Record<string, boolean>>({})
   const [userOrderContactSaving, setUserOrderContactSaving] = useState<Record<string, boolean>>({})
   const [userOrderContactFeedback, setUserOrderContactFeedback] = useState<
@@ -1695,6 +1687,7 @@ export default function UserDashboardPage() {
   const [providerTicketDrafts, setProviderTicketDrafts] = useState<Record<string, ProviderTicketDraft>>({})
   const [providerTicketSaving, setProviderTicketSaving] = useState<Record<string, boolean>>({})
   const providerNotifyAudioRef = useRef<HTMLAudioElement | null>(null)
+  const providerSoundEnabledRef = useRef(false)
   const providerNotifyIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const providerNotifyLastCountRef = useRef(0)
   const providerImageInputRef = useRef<HTMLInputElement | null>(null)
@@ -4534,25 +4527,77 @@ export default function UserDashboardPage() {
     return providerTicketsLive.find(ticket => String(ticket.id) === providerSelectedTicketId) ?? null
   }, [providerTicketsLive, providerSelectedTicketId])
   const providerPendingAlertsCount = providerOrdersLive.length + providerTicketsLive.length
-
-  const playProviderNotificationSound = useCallback(() => {
-    if (typeof window === 'undefined' || typeof Audio === 'undefined') return
+  const ensureProviderNotifyAudio = useCallback(() => {
+    if (typeof window === 'undefined' || typeof Audio === 'undefined') return null
     if (!providerNotifyAudioRef.current) {
       const audio = new Audio('/notificacion.mp3')
       audio.preload = 'auto'
       audio.volume = 1
       providerNotifyAudioRef.current = audio
     }
-
-    const audio = providerNotifyAudioRef.current
-    if (!audio) return
-    if (document.visibilityState !== 'visible') return
-
-    audio.currentTime = 0
-    void audio.play().catch(() => {
-      // Puede fallar si el navegador aún no permite autoplay.
-    })
+    return providerNotifyAudioRef.current
   }, [])
+
+  const playProviderNotificationSound = useCallback(
+    (options?: { allowHidden?: boolean }) => {
+      const audio = ensureProviderNotifyAudio()
+      if (!audio) return
+
+      const visibilityState = typeof document !== 'undefined' ? document.visibilityState : 'visible'
+      const isHidden = visibilityState !== 'visible'
+
+      if (isHidden && !options?.allowHidden) return
+      if (isHidden) {
+        if (isMobile) return
+        if (!providerSoundEnabledRef.current) return
+      }
+
+      audio.currentTime = 0
+      void audio.play().catch(() => {
+        // Puede fallar si el navegador aún no permite autoplay.
+      })
+    },
+    [ensureProviderNotifyAudio, isMobile]
+  )
+
+  // Habilita el audio una vez que el usuario interactúa para evitar bloqueos de autoplay en segundo plano.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handleUserInteraction = () => {
+      if (providerSoundEnabledRef.current) return
+      providerSoundEnabledRef.current = true
+
+      if (isMobile) return
+
+      const audio = ensureProviderNotifyAudio()
+      if (!audio) return
+
+      const wasMuted = audio.muted
+      const resetAudio = () => {
+        audio.pause()
+        audio.currentTime = 0
+        audio.muted = wasMuted
+      }
+
+      audio.muted = true
+      audio.currentTime = 0
+      const playPromise = audio.play()
+      if (playPromise && typeof playPromise.then === 'function') {
+        playPromise.then(resetAudio).catch(resetAudio)
+      } else {
+        resetAudio()
+      }
+    }
+
+    window.addEventListener('click', handleUserInteraction)
+    window.addEventListener('keydown', handleUserInteraction)
+
+    return () => {
+      window.removeEventListener('click', handleUserInteraction)
+      window.removeEventListener('keydown', handleUserInteraction)
+    }
+  }, [ensureProviderNotifyAudio, isMobile])
 
   const providerSalesTotalMetric = useMemo(() => {
     return providerOrders.reduce((sum, order) => {
@@ -7988,13 +8033,25 @@ export default function UserDashboardPage() {
       }, 260)
     }
 
+    const handleOrdersTicketsEvent = (payload: any) => {
+      const tableName =
+        typeof payload === 'object' && payload ? ((payload as { table?: string }).table ?? '') : ''
+
+      if (typeof document !== 'undefined' && document.hidden && (tableName === 'orders' || tableName === 'tickets')) {
+        // Sonido corto cuando llegan pedidos/tickets y la pestaña está oculta.
+        playProviderNotificationSound({ allowHidden: true })
+      }
+
+      scheduleReload()
+    }
+
     const channelName = `provider-live-${userId}-${isOwner ? 'owner' : 'provider'}`
     const channel = supabase.channel(channelName)
 
     if (isOwner) {
       channel
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, scheduleReload)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, scheduleReload)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, handleOrdersTicketsEvent)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, handleOrdersTicketsEvent)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, scheduleReload)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory_accounts' }, scheduleReload)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory_slots' }, scheduleReload)
@@ -8006,12 +8063,12 @@ export default function UserDashboardPage() {
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'orders', filter: `provider_id=eq.${userId}` },
-          scheduleReload
+          handleOrdersTicketsEvent
         )
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'tickets', filter: `provider_id=eq.${userId}` },
-          scheduleReload
+          handleOrdersTicketsEvent
         )
         .on(
           'postgres_changes',
@@ -8050,6 +8107,7 @@ export default function UserDashboardPage() {
     currentSectionId,
     isOwner,
     loadProviderDashboardData,
+    playProviderNotificationSound,
     providerAccessGranted,
     userId,
   ])
