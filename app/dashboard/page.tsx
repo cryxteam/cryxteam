@@ -139,6 +139,7 @@ type OwnedProduct = {
 type ResolvedTicket = {
   id: string
   productName: string
+  productLogo: string
   orderId: string
   subject: string
   description: string
@@ -2466,6 +2467,8 @@ export default function UserDashboardPage() {
               return {
                 id: String(ticket.id),
                 productName: toText(product?.name) || 'Producto no disponible',
+                productLogo:
+                  pickRowText(product ?? {}, ['logo', 'logo_url', 'image_url', 'image', 'icon']) || '/logo-mark.png',
                 orderId: ticket.order_id !== null ? String(ticket.order_id) : '-',
                 subject: toText(ticket.subject) || 'Ticket sin asunto',
                 description: toText(ticket.description) || '-',
@@ -2493,6 +2496,12 @@ export default function UserDashboardPage() {
             const delivery = order.deliveryMode.trim().toLowerCase()
             const isOnDemand = delivery === 'on_demand' || delivery === 'a_pedido' || delivery === 'a pedido'
             if (blockedOrderIds.has(order.id)) return false
+            const hasCredentials = order.credentialsText.trim().length > 0
+            const isExpired =
+              order.expiresAt !== null && !Number.isNaN(new Date(order.expiresAt).getTime())
+                ? new Date(order.expiresAt).getTime() <= Date.now()
+                : false
+            if (!hasCredentials || isExpired) return false
             if (!isOnDemand) return true
             return isPaidLikeOrderStatus(order.status)
           })
@@ -5429,6 +5438,32 @@ export default function UserDashboardPage() {
           setProviderInventoryMsg(`No se pudo crear perfil/PIN. ${insertSlotError.message}`)
           return
         }
+      }
+    }
+
+    // Si la cuenta/perfil ya esta asignada a una compra, actualizamos las credenciales del pedido
+    if (providerInventoryEditingAccount.orderId) {
+      const orderCredentialPayload = buildOrderCredentialPayload(
+        null,
+        {
+          loginUser: nextLoginUserRaw,
+          loginPassword: nextLoginPassword,
+          profileLabel: isProfilesInventoryProduct ? nextSlotLabel || '1' : '',
+          profilePin: isProfilesInventoryProduct ? nextProfilePin : '',
+          isProfiles: isProfilesInventoryProduct,
+        }
+      )
+
+      const { error: orderUpdateError } = await supabase
+        .from('orders')
+        .update({ credentials: orderCredentialPayload })
+        .eq('id', providerInventoryEditingAccount.orderId)
+
+      if (orderUpdateError) {
+        setIsProviderInventoryEditingSaving(false)
+        setProviderInventoryMsgType('error')
+        setProviderInventoryMsg(`Cuenta editada, pero no se pudo refrescar credenciales del cliente. ${orderUpdateError.message}`)
+        return
       }
     }
 
@@ -12279,25 +12314,41 @@ export default function UserDashboardPage() {
                         return (
                           <article
                             key={ticket.id}
-                            className={`${styles.ticketCard} ${isResolved ? styles.ticketCardResolved : styles.ticketCardOpen}`}
+                            className={`${styles.providerTicketStripCard} ${isResolved ? styles.ticketCardResolved : styles.ticketCardOpen}`}
                           >
-                            <div className={styles.ticketHeader}>
-                              <strong>{ticket.subject}</strong>
-                              <span>{formatOrderStatus(ticket.status)}</span>
+                            <div className={styles.providerTicketStripMain}>
+                              <span className={styles.providerOrderStripImageWrap}>
+                                <Image
+                                  src={ticket.productLogo}
+                                  alt={ticket.productName}
+                                  fill
+                                  sizes='96px'
+                                  className={styles.providerOrderStripImage}
+                                />
+                              </span>
+                              <div className={styles.providerTicketStripBody}>
+                                <strong className={styles.providerOrderStripTitle}>{ticket.subject}</strong>
+                                <span className={styles.providerOrderStripLine}>📦 {ticket.productName}</span>
+                                <span className={styles.providerOrderStripLine}>🧾 Ticket #{ticket.id} · Compra {ticket.orderId}</span>
+                                <span className={styles.providerOrderStripLine}>
+                                  🕑 Ultima: {formatDate(ticket.updatedAt)} · Resuelto: {formatDate(ticket.resolvedAt)}
+                                </span>
+                                <span className={styles.providerOrderStripLine}>🧩 Detalle: {ticket.description || '-'}</span>
+                                <span className={styles.providerOrderStripLine}>
+                                  📝 Resolucion: {ticket.resolutionSummary || '-'}{ticket.resolutionDetail ? ` · ${ticket.resolutionDetail}` : ''}
+                                </span>
+                              </div>
+                              <span
+                                className={`${styles.providerTicketStripStatus} ${
+                                  isResolved ? styles.ticketStatusResolved : styles.ticketStatusOpen
+                                }`}
+                              >
+                                {formatOrderStatus(ticket.status)}
+                              </span>
                             </div>
 
-                            <p className={styles.ticketLine}>Producto: {ticket.productName}</p>
-                            <p className={styles.ticketLine}>Compra vinculada: {ticket.orderId}</p>
-                            <p className={styles.ticketLine}>Problema: {ticket.description}</p>
-                            <p className={styles.ticketLine}>Resumen de solucion: {ticket.resolutionSummary}</p>
-                            <p className={styles.ticketLine}>Detalle: {ticket.resolutionDetail}</p>
-                            <p className={styles.ticketDates}>
-                              Ultima actualizacion: {formatDate(ticket.updatedAt)} | Resuelto:{' '}
-                              {formatDate(ticket.resolvedAt)}
-                            </p>
-
                             {isResolved && (
-                              <div className={styles.ticketActions}>
+                              <div className={styles.ticketActionsStrip}>
                                 <button
                                   type='button'
                                   className={styles.ticketConfirmButton}

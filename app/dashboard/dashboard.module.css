@@ -7083,6 +7083,24 @@
   color: #bbf7d0;
 }
 
+.ticketActionsStrip {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ticketStatusOpen {
+  border-color: rgba(248, 113, 113, 0.6) !important;
+  background: rgba(127, 29, 29, 0.45) !important;
+  color: #fecaca !important;
+}
+
+.ticketStatusResolved {
+  border-color: rgba(74, 222, 128, 0.6) !important;
+  background: rgba(22, 101, 52, 0.45) !important;
+  color: #bbf7d0 !important;
+}
+
 .ticketLine {
   margin: 0;
   color: #cbd5e1;
