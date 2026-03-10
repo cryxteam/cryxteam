@@ -1252,11 +1252,11 @@
 }
 
 .providerField textarea {
-  min-height: 92px;
+  min-height: 120px;
   height: auto;
-  padding: 10px 12px;
+  padding: 12px 14px;
   resize: vertical;
-  line-height: 1.35;
+  line-height: 1.45;
 }
 
 .providerTicketStatusReadonly {
@@ -2317,12 +2317,16 @@
 .providerOrderStripTitle {
   margin: 0;
   color: #f8fafc;
-  font-size: 1.3rem;
+  font-size: 1.12rem;
   line-height: 1.05;
   font-weight: 900;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.userTicketTitle {
+  font-size: 1.08rem;
 }
 
 .providerOrderStripLine {

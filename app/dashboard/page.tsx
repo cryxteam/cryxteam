@@ -1412,6 +1412,11 @@ function stripInventoryProfileSuffix(loginRaw: string) {
   return loginRaw.replace(/::slot_[^:]+::[^:]+$/i, '').replace(/::perfil_.+$/i, '')
 }
 
+function truncateText(text: string, max: number) {
+  if (text.length <= max) return text
+  return `${text.slice(0, max - 1)}…`
+}
+
 function extractInventoryProfileSuffix(loginRaw: string) {
   const match = loginRaw.match(/::slot_[^:]+::([^:]+)$/i)
   return match ? match[1] : ''
@@ -1587,6 +1592,7 @@ export default function UserDashboardPage() {
   const [ordersReloadSeq, setOrdersReloadSeq] = useState(0)
   const [userTicketConfirming, setUserTicketConfirming] = useState<Record<string, boolean>>({})
   const [userTicketFeedback, setUserTicketFeedback] = useState<Record<string, UserOrderContactFeedback>>({})
+  const [userTicketExpanded, setUserTicketExpanded] = useState<Record<string, boolean>>({})
   const [visibleCredentials, setVisibleCredentials] = useState<Record<string, boolean>>({})
   const [userOrderContactSaving, setUserOrderContactSaving] = useState<Record<string, boolean>>({})
   const [userOrderContactFeedback, setUserOrderContactFeedback] = useState<
@@ -2598,6 +2604,13 @@ export default function UserDashboardPage() {
       for (const ticket of resolvedTickets) {
         const rowFeedback = previous[ticket.id]
         if (rowFeedback) next[ticket.id] = rowFeedback
+      }
+      return next
+    })
+    setUserTicketExpanded(previous => {
+      const next: Record<string, boolean> = {}
+      for (const ticket of resolvedTickets) {
+        if (previous[ticket.id]) next[ticket.id] = true
       }
       return next
     })
@@ -10050,7 +10063,7 @@ export default function UserDashboardPage() {
                                         })
                                       }
                                       placeholder='Describe brevemente la solucion aplicada'
-                                      rows={3}
+                                      rows={5}
                                     />
                                   </label>
 
@@ -12326,11 +12339,29 @@ export default function UserDashboardPage() {
                         const isResolved = isResolvedStatus(ticket.status)
                         const ticketFeedback = userTicketFeedback[ticket.id]
                         const isConfirming = Boolean(userTicketConfirming[ticket.id])
+                        const isExpanded = Boolean(userTicketExpanded[ticket.id])
 
                         return (
                           <article
                             key={ticket.id}
                             className={`${styles.providerTicketStripCard} ${isResolved ? styles.ticketCardResolved : styles.ticketCardOpen}`}
+                            role='button'
+                            tabIndex={0}
+                            onClick={() =>
+                              setUserTicketExpanded(previous => ({
+                                ...previous,
+                                [ticket.id]: !previous[ticket.id],
+                              }))
+                            }
+                            onKeyDown={event => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault()
+                                setUserTicketExpanded(previous => ({
+                                  ...previous,
+                                  [ticket.id]: !previous[ticket.id],
+                                }))
+                              }
+                            }}
                           >
                             <div className={styles.providerTicketStripMain}>
                               <span className={styles.providerOrderStripImageWrap}>
@@ -12343,16 +12374,27 @@ export default function UserDashboardPage() {
                                 />
                               </span>
                               <div className={styles.providerTicketStripBody}>
-                                <strong className={styles.providerOrderStripTitle}>{ticket.subject}</strong>
-                                <span className={styles.providerOrderStripLine}>📦 {ticket.productName}</span>
+                                <strong className={`${styles.providerOrderStripTitle} ${styles.userTicketTitle}`}>
+                                  {ticket.subject}
+                                </strong>
                                 <span className={styles.providerOrderStripLine}>👤 {ticket.providerName}</span>
                                 <span className={styles.providerOrderStripLine}>🧾 Ticket #{ticket.id} · Compra {ticket.orderId}</span>
                                 <span className={styles.providerOrderStripLine}>
                                   🕑 Ultima: {formatDate(ticket.updatedAt)} · Resuelto: {formatDate(ticket.resolvedAt)}
                                 </span>
-                                <span className={styles.providerOrderStripLine}>🧩 Detalle: {ticket.description || '-'}</span>
                                 <span className={styles.providerOrderStripLine}>
-                                  📝 Resolucion: {ticket.resolutionSummary || '-'}{ticket.resolutionDetail ? ` · ${ticket.resolutionDetail}` : ''}
+                                  🧩 Detalle: {isExpanded ? ticket.description || '-' : truncateText(ticket.description || '-', 60)}
+                                </span>
+                                <span className={styles.providerOrderStripLine}>
+                                  📝 Resolucion:{' '}
+                                  {isExpanded
+                                    ? [ticket.resolutionSummary, ticket.resolutionDetail].filter(Boolean).join(' · ') ||
+                                      '-'
+                                    : truncateText(
+                                        [ticket.resolutionSummary, ticket.resolutionDetail].filter(Boolean).join(' · ') ||
+                                          '-',
+                                        60
+                                      )}
                                 </span>
                               </div>
                               <span
@@ -12364,7 +12406,7 @@ export default function UserDashboardPage() {
                               </span>
                             </div>
 
-                            {isResolved && (
+                            {isExpanded && (
                               <div className={styles.ticketActionsStrip}>
                                 <button
                                   type='button'
