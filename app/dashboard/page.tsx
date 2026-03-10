@@ -1593,6 +1593,7 @@ export default function UserDashboardPage() {
   const [userTicketConfirming, setUserTicketConfirming] = useState<Record<string, boolean>>({})
   const [userTicketFeedback, setUserTicketFeedback] = useState<Record<string, UserOrderContactFeedback>>({})
   const [userTicketExpanded, setUserTicketExpanded] = useState<Record<string, boolean>>({})
+  const [userTicketModal, setUserTicketModal] = useState<ResolvedTicket | null>(null)
   const [visibleCredentials, setVisibleCredentials] = useState<Record<string, boolean>>({})
   const [userOrderContactSaving, setUserOrderContactSaving] = useState<Record<string, boolean>>({})
   const [userOrderContactFeedback, setUserOrderContactFeedback] = useState<
@@ -12347,19 +12348,11 @@ export default function UserDashboardPage() {
                             className={`${styles.providerTicketStripCard} ${isResolved ? styles.ticketCardResolved : styles.ticketCardOpen}`}
                             role='button'
                             tabIndex={0}
-                            onClick={() =>
-                              setUserTicketExpanded(previous => ({
-                                ...previous,
-                                [ticket.id]: !previous[ticket.id],
-                              }))
-                            }
+                            onClick={() => setUserTicketModal(ticket)}
                             onKeyDown={event => {
                               if (event.key === 'Enter' || event.key === ' ') {
                                 event.preventDefault()
-                                setUserTicketExpanded(previous => ({
-                                  ...previous,
-                                  [ticket.id]: !previous[ticket.id],
-                                }))
+                                setUserTicketModal(ticket)
                               }
                             }}
                           >
@@ -12493,6 +12486,79 @@ export default function UserDashboardPage() {
               </button>
             </div>
           </article>
+        </div>
+      )}
+
+      {userTicketModal && (
+        <div className={styles.providerOrderModalBackdrop} role='dialog' aria-modal='true'>
+          <section className={styles.providerOrderModalCard} role='document'>
+            <header className={styles.providerOrderModalHead}>
+              <span className={styles.providerOrderModalThumb}>
+                <Image
+                  src={userTicketModal.productLogo || '/logo-mark.png'}
+                  alt={userTicketModal.productName}
+                  fill
+                  sizes='60px'
+                  className={styles.providerOrderStripImage}
+                />
+              </span>
+              <div className={styles.providerOrderModalTitleWrap}>
+                <strong>{userTicketModal.subject}</strong>
+                <span>Ticket #{userTicketModal.id} · {formatOrderStatus(userTicketModal.status)}</span>
+              </div>
+              <button
+                type='button'
+                className={styles.providerOrderModalClose}
+                onClick={() => setUserTicketModal(null)}
+                aria-label='Cerrar ticket'
+              >
+                ×
+              </button>
+            </header>
+
+            <div className={styles.providerOrderModalScroll}>
+              <div className={styles.providerOrderModalSummary}>
+                <span>📦 {userTicketModal.productName}</span>
+                <span>🤝 {userTicketModal.providerName}</span>
+                <span>🧾 Pedido: {userTicketModal.orderId}</span>
+                <span>🕑 Ultima: {formatDate(userTicketModal.updatedAt)} · Resuelto: {formatDate(userTicketModal.resolvedAt)}</span>
+              </div>
+
+              <div className={styles.providerTicketDetailText}>
+                <p><strong>Detalle:</strong> {userTicketModal.description || '-'}</p>
+                <p>
+                  <strong>Resolucion:</strong>{' '}
+                  {[userTicketModal.resolutionSummary, userTicketModal.resolutionDetail].filter(Boolean).join(' · ') ||
+                    '-'}
+                </p>
+              </div>
+
+              {isResolvedStatus(userTicketModal.status) && (
+                <div className={styles.ticketActionsStrip}>
+                  <button
+                    type='button'
+                    className={styles.ticketConfirmButton}
+                    onClick={() => void handleUserConfirmTicket(userTicketModal)}
+                    disabled={Boolean(userTicketConfirming[userTicketModal.id])}
+                  >
+                    {userTicketConfirming[userTicketModal.id] ? 'Confirmando...' : 'Confirmar solucion'}
+                  </button>
+                </div>
+              )}
+
+              {userTicketFeedback[userTicketModal.id] && (
+                <p
+                  className={
+                    userTicketFeedback[userTicketModal.id].type === 'ok'
+                      ? styles.userInlineOk
+                      : styles.inlineError
+                  }
+                >
+                  {userTicketFeedback[userTicketModal.id].text}
+                </p>
+              )}
+            </div>
+          </section>
         </div>
       )}
 

@@ -7117,6 +7117,13 @@
   color: #bbf7d0 !important;
 }
 
+.providerTicketDetailText {
+  display: grid;
+  gap: 8px;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+}
+
 .ticketLine {
   margin: 0;
   color: #cbd5e1;
