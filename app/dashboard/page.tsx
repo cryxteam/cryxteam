@@ -1610,6 +1610,8 @@ export default function UserDashboardPage() {
   const [userTicketExpanded, setUserTicketExpanded] = useState<Record<string, boolean>>({})
   const [userTicketModal, setUserTicketModal] = useState<ResolvedTicket | null>(null)
   const pushRegisteringRef = useRef(false)
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>('default')
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>('default')
   const [visibleCredentials, setVisibleCredentials] = useState<Record<string, boolean>>({})
   const [userOrderContactSaving, setUserOrderContactSaving] = useState<Record<string, boolean>>({})
   const [userOrderContactFeedback, setUserOrderContactFeedback] = useState<
@@ -2884,69 +2886,87 @@ export default function UserDashboardPage() {
     }
   }, [loadAffiliateMembers, profile?.is_approved, userId])
 
-  useEffect(() => {
+  const registerPush = useCallback(async () => {
     if (typeof window === 'undefined') return
     if (!userId || !profile?.is_approved) return
     if (pushRegisteringRef.current) return
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setPushPermission('unsupported')
+      return
+    }
     const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
     if (!vapidPublic) return
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
 
-    const registerPush = async () => {
-      try {
-        pushRegisteringRef.current = true
-        const registration = await navigator.serviceWorker.register('/sw.js')
+    pushRegisteringRef.current = true
+    try {
+      setPushPermission(Notification.permission)
+      const registration = await navigator.serviceWorker.register('/sw.js')
 
-        if (Notification.permission === 'default') {
-          await Notification.requestPermission()
-        }
-        if (Notification.permission !== 'granted') {
+      if (Notification.permission === 'default') {
+        const perm = await Notification.requestPermission()
+        setPushPermission(perm)
+        if (perm !== 'granted') {
           pushRegisteringRef.current = false
           return
         }
-
-        const existing = await registration.pushManager.getSubscription()
-        const subscription =
-          existing ??
-          (await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidPublic),
-          }))
-
-        if (!subscription) {
-          pushRegisteringRef.current = false
-          return
-        }
-
-        const rawP256dh = subscription.getKey('p256dh')
-        const rawAuth = subscription.getKey('auth')
-        if (!rawP256dh || !rawAuth) {
-          pushRegisteringRef.current = false
-          return
-        }
-
-        const { error } = await supabase.from('push_subscriptions').upsert(
-          {
-            provider_id: userId,
-            endpoint: subscription.endpoint,
-            p256dh: bufferToBase64(rawP256dh),
-            auth: bufferToBase64(rawAuth),
-            user_agent: navigator.userAgent,
-          },
-          { onConflict: 'endpoint' }
-        )
-
-        if (error) {
-          pushRegisteringRef.current = false
-          return
-        }
-      } catch {
+      } else if (Notification.permission !== 'granted') {
         pushRegisteringRef.current = false
+        return
       }
-    }
 
-    void registerPush()
+      const existing = await registration.pushManager.getSubscription()
+      const subscription =
+        existing ??
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublic),
+        }))
+
+      if (!subscription) {
+        pushRegisteringRef.current = false
+        return
+      }
+
+      const rawP256dh = subscription.getKey('p256dh')
+      const rawAuth = subscription.getKey('auth')
+      if (!rawP256dh || !rawAuth) {
+        pushRegisteringRef.current = false
+        return
+      }
+
+      const { error } = await supabase.from('push_subscriptions').upsert(
+        {
+          provider_id: userId,
+          endpoint: subscription.endpoint,
+          p256dh: bufferToBase64(rawP256dh),
+          auth: bufferToBase64(rawAuth),
+          user_agent: navigator.userAgent,
+        },
+        { onConflict: 'endpoint' }
+      )
+
+      if (error) {
+        pushRegisteringRef.current = false
+        return
+      }
+
+      setPushPermission('granted')
+    } catch {
+      setPushPermission(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported')
+    } finally {
+      pushRegisteringRef.current = false
+    }
   }, [profile?.is_approved, userId])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    setPushPermission(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
+    if (!userId || !profile?.is_approved) return
+    void registerPush()
+    const onFirstClick = () => void registerPush()
+    window.addEventListener('click', onFirstClick, { once: true })
+    return () => window.removeEventListener('click', onFirstClick)
+  }, [profile?.is_approved, registerPush, userId])
 
   async function handleSignOut() {
     setIsSigningOut(true)
