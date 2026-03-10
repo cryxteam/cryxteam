@@ -1417,6 +1417,21 @@ function truncateText(text: string, max: number) {
   return `${text.slice(0, max - 1)}…`
 }
 
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = atob(base64)
+  const outputArray = new Uint8Array(rawData.length)
+  for (let i = 0; i < rawData.length; i += 1) {
+    outputArray[i] = rawData.charCodeAt(i)
+  }
+  return outputArray
+}
+
+function bufferToBase64(buffer: ArrayBuffer) {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+}
+
 function extractInventoryProfileSuffix(loginRaw: string) {
   const match = loginRaw.match(/::slot_[^:]+::([^:]+)$/i)
   return match ? match[1] : ''
@@ -1594,6 +1609,7 @@ export default function UserDashboardPage() {
   const [userTicketFeedback, setUserTicketFeedback] = useState<Record<string, UserOrderContactFeedback>>({})
   const [userTicketExpanded, setUserTicketExpanded] = useState<Record<string, boolean>>({})
   const [userTicketModal, setUserTicketModal] = useState<ResolvedTicket | null>(null)
+  const pushRegisteringRef = useRef(false)
   const [visibleCredentials, setVisibleCredentials] = useState<Record<string, boolean>>({})
   const [userOrderContactSaving, setUserOrderContactSaving] = useState<Record<string, boolean>>({})
   const [userOrderContactFeedback, setUserOrderContactFeedback] = useState<
@@ -2867,6 +2883,70 @@ export default function UserDashboardPage() {
       void supabase.removeChannel(channel)
     }
   }, [loadAffiliateMembers, profile?.is_approved, userId])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!userId || !profile?.is_approved) return
+    if (pushRegisteringRef.current) return
+    const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+    if (!vapidPublic) return
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+
+    const registerPush = async () => {
+      try {
+        pushRegisteringRef.current = true
+        const registration = await navigator.serviceWorker.register('/sw.js')
+
+        if (Notification.permission === 'default') {
+          await Notification.requestPermission()
+        }
+        if (Notification.permission !== 'granted') {
+          pushRegisteringRef.current = false
+          return
+        }
+
+        const existing = await registration.pushManager.getSubscription()
+        const subscription =
+          existing ??
+          (await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidPublic),
+          }))
+
+        if (!subscription) {
+          pushRegisteringRef.current = false
+          return
+        }
+
+        const rawP256dh = subscription.getKey('p256dh')
+        const rawAuth = subscription.getKey('auth')
+        if (!rawP256dh || !rawAuth) {
+          pushRegisteringRef.current = false
+          return
+        }
+
+        const { error } = await supabase.from('push_subscriptions').upsert(
+          {
+            provider_id: userId,
+            endpoint: subscription.endpoint,
+            p256dh: bufferToBase64(rawP256dh),
+            auth: bufferToBase64(rawAuth),
+            user_agent: navigator.userAgent,
+          },
+          { onConflict: 'endpoint' }
+        )
+
+        if (error) {
+          pushRegisteringRef.current = false
+          return
+        }
+      } catch {
+        pushRegisteringRef.current = false
+      }
+    }
+
+    void registerPush()
+  }, [profile?.is_approved, userId])
 
   async function handleSignOut() {
     setIsSigningOut(true)
