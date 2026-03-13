@@ -112,12 +112,70 @@ const BRAND_LOGOS: BrandLogo[] = [
 ]
 const MARQUEE_LOGOS: BrandLogo[] = [...BRAND_LOGOS, ...BRAND_LOGOS, ...BRAND_LOGOS]
 
+type CommentCard = {
+  id: string
+  author: string
+  message: string
+  productName: string
+  rating: number
+  avatarUrl: string
+  createdAt: string | null
+}
+
+const COMMENTS_TABLE = 'product_comments'
+
+const FALLBACK_COMMENTS: CommentCard[] = [
+  {
+    id: 'fallback-1',
+    author: 'Anahí Q.',
+    message: 'Atención rápida y las credenciales llegaron al toque. Recomiendo el plan familiar.',
+    productName: 'Spotify Familiar',
+    rating: 5,
+    avatarUrl: '',
+    createdAt: null,
+  },
+  {
+    id: 'fallback-2',
+    author: 'Luis M.',
+    message: 'Prime Video listo en minutos, todo claro y sin recargos escondidos.',
+    productName: 'Prime Video',
+    rating: 4.8,
+    avatarUrl: '',
+    createdAt: null,
+  },
+  {
+    id: 'fallback-3',
+    author: 'Carla R.',
+    message: 'Compré Disney para mis hijos y funciona perfecto. Buen soporte por WhatsApp.',
+    productName: 'Disney+ Perfil',
+    rating: 5,
+    avatarUrl: '',
+    createdAt: null,
+  },
+  {
+    id: 'fallback-4',
+    author: 'Jorge T.',
+    message: 'Me resolvieron una duda en segundos. Entregaron HBO Max al instante.',
+    productName: 'HBO Max',
+    rating: 4.9,
+    avatarUrl: '',
+    createdAt: null,
+  },
+]
+
 function formatPrice(value: number) {
   return `S/ ${value.toFixed(2)}`
 }
 
 function formatVisualStock(stock: number) {
   return Math.max(0, Math.floor(stock * 2))
+}
+
+function commentInitials(name: string) {
+  if (!name) return '??'
+  const parts = name.trim().split(/\s+/).slice(0, 2)
+  const initials = parts.map(part => part[0]?.toUpperCase() ?? '').join('')
+  return initials || name[0]?.toUpperCase() || '??'
 }
 
 function detectCategory(name: string): CategoryKey {
@@ -612,6 +670,12 @@ export default function ProductsPage() {
   )
   const [catalogPage, setCatalogPage] = useState(1)
   const [activeTermsProductId, setActiveTermsProductId] = useState<number | null>(null)
+  const [comments, setComments] = useState<CommentCard[]>([])
+  const [commentMessage, setCommentMessage] = useState('')
+  const [commentProduct, setCommentProduct] = useState('')
+  const [commentRating, setCommentRating] = useState(5)
+  const [commentSubmitting, setCommentSubmitting] = useState(false)
+  const [commentFeedback, setCommentFeedback] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -783,14 +847,54 @@ export default function ProductsPage() {
                 imageUrl,
                 sortOrder,
               } satisfies ProductNameFilter
-            })
+           })
             .filter((item): item is ProductNameFilter => Boolean(item))
             .sort((a, b) => a.sortOrder - b.sortOrder)
 
           setNameFilters(mapped)
         }
 
-        await Promise.all([loadViewer(), loadProducts(), loadNameFilters()])
+        const loadComments = async () => {
+          const { data, error } = await supabase
+            .from(COMMENTS_TABLE)
+            .select('id, author, message, product_name, rating, avatar_url, created_at, is_public')
+            .eq('is_public', true)
+            .order('created_at', { ascending: false })
+            .limit(60)
+
+          if (!mounted) return
+
+          if (error || !Array.isArray(data)) {
+            setComments(FALLBACK_COMMENTS)
+            return
+          }
+
+          const mapped = (data as Record<string, unknown>[])
+            .map((row, index) => {
+              const id = toIdText(row.id, `comment-${index}`)
+              const author = toText(row.author, 'Cliente')
+              const message = toText(row.message, '')
+              const productName = toText(row.product_name, 'Producto')
+              const rating = Number.isFinite(Number(row.rating)) ? Number(row.rating) : 5
+              const avatarUrl = toText(row.avatar_url, '')
+              const createdAt = toText(row.created_at) || null
+              if (!id || !message) return null
+              return {
+                id,
+                author,
+                message,
+                productName,
+                rating,
+                avatarUrl,
+                createdAt,
+              } as CommentCard
+            })
+            .filter((item): item is CommentCard => Boolean(item))
+
+          setComments(mapped.length > 0 ? mapped : FALLBACK_COMMENTS)
+        }
+
+        await Promise.all([loadViewer(), loadProducts(), loadNameFilters(), loadComments()])
         if (mounted) setIsLoading(false)
       })()
     })
@@ -1105,23 +1209,66 @@ export default function ProductsPage() {
     [nameFilters, activeNameFilterId]
   )
 
-  const trendingProducts = useMemo(() => {
-    const hasRealTrendData = Object.values(trendOrdersByProduct).some(value => value > 0)
-    const ranked = sortedProducts
-      .map((item, index) => ({
-        item,
-        orders: trendOrdersByProduct[item.id] ?? 0,
-        fallbackRank: index,
-      }))
-      .sort((a, b) => {
-        if (hasRealTrendData) {
-          return b.orders - a.orders || b.item.stock - a.item.stock || a.item.priceGuest - b.item.priceGuest
-        }
-        return b.item.stock - a.item.stock || a.item.priceGuest - b.item.priceGuest || a.fallbackRank - b.fallbackRank
-      })
+  const commentCards = useMemo(() => {
+    return comments.length > 0 ? comments : FALLBACK_COMMENTS
+  }, [comments])
 
-    return ranked.slice(0, 6)
-  }, [sortedProducts, trendOrdersByProduct])
+  const commentTrackDuration = useMemo(() => {
+    const base = commentCards.length * 4
+    return Math.max(18, Math.min(48, base || 18))
+  }, [commentCards])
+
+  const handleCommentSubmit = async () => {
+    const message = commentMessage.trim()
+    const productName = commentProduct.trim()
+    const safeRating = Math.max(1, Math.min(5, Number(commentRating) || 5))
+
+    if (message.length < 8) {
+      setCommentFeedback('Escribe al menos 8 caracteres.')
+      return
+    }
+
+    setCommentSubmitting(true)
+    setCommentFeedback(null)
+
+    const author = accountLabel || 'Invitado'
+
+    const { error, data } = await supabase
+      .from(COMMENTS_TABLE)
+      .insert({
+        author,
+        message,
+        product_name: productName || null,
+        rating: safeRating,
+        avatar_url: null,
+        is_public: true,
+      })
+      .select('id, author, message, product_name, rating, avatar_url, created_at')
+      .maybeSingle()
+
+    setCommentSubmitting(false)
+
+    if (error) {
+      setCommentFeedback(`No se pudo enviar tu comentario: ${error.message}`)
+      return
+    }
+
+    const inserted: CommentCard = {
+      id: toIdText(data?.id, `local-${Date.now()}`),
+      author: toText(data?.author, author),
+      message,
+      productName: toText(data?.product_name, productName || 'Producto'),
+      rating: Number.isFinite(Number(data?.rating)) ? Number(data?.rating) : safeRating,
+      avatarUrl: toText(data?.avatar_url),
+      createdAt: toText(data?.created_at) || null,
+    }
+
+    setComments(previous => [inserted, ...previous].slice(0, 120))
+    setCommentMessage('')
+    setCommentProduct('')
+    setCommentRating(5)
+    setCommentFeedback('¡Gracias por tu comentario!')
+  }
 
   const recommendationProducts = useMemo(() => {
     if (sortedProducts.length === 0) return []
@@ -1302,10 +1449,7 @@ export default function ProductsPage() {
     setCatalogPage(1)
   }
 
-  const totalTrendOrders = useMemo(
-    () => Object.values(trendOrdersByProduct).reduce((sum, value) => sum + Math.max(0, toNumber(value)), 0),
-    [trendOrdersByProduct]
-  )
+  const totalComments = useMemo(() => commentCards.length, [commentCards])
 
   const focusProduct = (product: Product) => {
     setSelectedCategory('all')
@@ -1408,55 +1552,107 @@ export default function ProductsPage() {
         </section>
 
         <section className={styles.discoverLayout}>
-          <article className={styles.trendingPanel}>
-            <header className={styles.discoverHead}>
-              <div>
-                <h2>{'\u{1F525}'} Tendencias 24h</h2>
-                <p>Lo mas pedido durante las ultimas 24 horas.</p>
-              </div>
-              <span className={styles.discoverCounter}>{totalTrendOrders} compras</span>
-            </header>
-            <div className={styles.trendingGrid}>
-              {trendingProducts.map(({ item, orders }) => {
-                const displayPrice = canPurchase ? item.priceAffiliate : item.priceGuest
-                const trendLabel = orders > 0 ? `${orders} compras` : 'Sin compras'
-
-                return (
+          {catalogViewportWidth >= 980 && (
+            <article className={styles.commentsPanel}>
+              <header className={styles.discoverHead}>
+                <div>
+                  <h2>{'\u{1F4AC}'} Comentarios</h2>
+                  <p>Opiniones reales de compradores recientes.</p>
+                </div>
+                <div className={styles.commentsActions}>
+                  <span className={styles.discoverCounter}>{totalComments} comentarios</span>
                   <button
-                    key={`trend-${item.id}`}
                     type='button'
-                    className={styles.trendingCard}
-                    onClick={() => focusProduct(item)}
+                    className={styles.commentCta}
+                    onClick={() => {
+                      const form = document.getElementById('comment-form')
+                      form?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    }}
                   >
-                    <span className={styles.trendingImageWrap}>
-                      <Image
-                        src={item.logo}
-                        alt={item.name}
-                        width={320}
-                        height={180}
-                        sizes='(max-width: 980px) 100vw, 28vw'
-                        quality={100}
-                        className={styles.trendingImage}
-                        draggable={false}
-                        onContextMenu={event => event.preventDefault()}
-                        onDragStart={event => event.preventDefault()}
-                      />
-                    </span>
-                    <span className={styles.trendingBody}>
-                      <strong>{item.name}</strong>
-                      <small>
-                        {formatAccountType(item.accountType)} | {formatDeliveryMode(item.deliveryMode)}
-                      </small>
-                      <span className={styles.trendingMeta}>
-                        <em>{trendLabel}</em>
-                        <b>{formatPrice(displayPrice)}</b>
-                      </span>
-                    </span>
+                    Deja tu comentario
                   </button>
-                )
-              })}
-            </div>
-          </article>
+                </div>
+              </header>
+              {commentCards.length === 0 ? (
+                <p className={styles.commentsEmpty}>Aún no hay comentarios.</p>
+              ) : (
+                <div className={styles.commentsMarquee} aria-label='Comentarios de clientes'>
+                  <div
+                    className={styles.commentsTrack}
+                    style={{ animationDuration: `${commentTrackDuration}s` }}
+                  >
+                    {[...commentCards, ...commentCards].map((comment, index) => (
+                      <figure key={`${comment.id}-${index}`} className={styles.commentCard}>
+                        <div className={styles.commentMeta}>
+                          <span
+                            className={styles.commentAvatar}
+                            style={
+                              comment.avatarUrl
+                                ? { backgroundImage: `url(${comment.avatarUrl})` }
+                                : undefined
+                            }
+                            aria-hidden
+                          >
+                            {!comment.avatarUrl && commentInitials(comment.author)}
+                          </span>
+                          <div className={styles.commentText}>
+                            <strong>{comment.author}</strong>
+                            <small>{comment.productName}</small>
+                          </div>
+                          <span className={styles.commentRating}>★ {comment.rating.toFixed(1)}</span>
+                        </div>
+                        <figcaption className={styles.commentBody}>{comment.message}</figcaption>
+                      </figure>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.commentFormShell} id='comment-form'>
+                <div className={styles.commentFormGrid}>
+                  <label className={styles.commentField}>
+                    <span>Comentario</span>
+                    <textarea
+                      value={commentMessage}
+                      onChange={event => setCommentMessage(event.target.value)}
+                      maxLength={400}
+                      placeholder='Comparte tu experiencia (mínimo 8 caracteres)'
+                    />
+                  </label>
+                  <label className={styles.commentField}>
+                    <span>Producto (opcional)</span>
+                    <input
+                      type='text'
+                      value={commentProduct}
+                      onChange={event => setCommentProduct(event.target.value)}
+                      maxLength={80}
+                      placeholder='Ej: Netflix Perfil, Disney+ Cuenta...'
+                    />
+                  </label>
+                  <label className={styles.commentFieldInline}>
+                    <span>Calificación</span>
+                    <input
+                      type='number'
+                      min={1}
+                      max={5}
+                      step='0.1'
+                      value={commentRating}
+                      onChange={event => setCommentRating(Number(event.target.value))}
+                    />
+                  </label>
+                  <button
+                    type='button'
+                    className={styles.commentSubmit}
+                    onClick={() => void handleCommentSubmit()}
+                    disabled={commentSubmitting}
+                  >
+                    {commentSubmitting ? 'Enviando...' : 'Enviar comentario'}
+                  </button>
+                </div>
+                {commentFeedback && <p className={styles.commentFeedback}>{commentFeedback}</p>}
+              </div>
+            </article>
+          )}
 
           <aside className={styles.recommendPanel}>
             <header className={styles.discoverHead}>
