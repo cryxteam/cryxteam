@@ -4016,30 +4016,6 @@ export default function UserDashboardPage() {
     setProviderPinInput('')
   }
 
-  async function settleProviderCommissionsFromOrders(orderRows: Array<Record<string, unknown>>) {
-    if (!userId || isOwner) return
-
-    const uniquePaidOrderIds = Array.from(
-      new Set(
-        orderRows
-          .map(row => {
-            const id = toText(row.id)
-            const status = toText(row.status)
-            return id && isPaidLikeOrderStatus(status) ? id : null
-          })
-          .filter(Boolean) as string[]
-      )
-    ).slice(0, 150)
-
-    for (const orderId of uniquePaidOrderIds) {
-      try {
-        await settleProviderCommissionForOrder(orderId, 'auto')
-      } catch {
-        // Silenciar para no romper el flujo de carga; la función RPC debe ser idempotente.
-      }
-    }
-  }
-
   const loadProviderDashboardData = useCallback(async () => {
     if (!userId || !canSeeProvider) return
 
@@ -4106,8 +4082,6 @@ export default function UserDashboardPage() {
       const productRows = (productsResult.data ?? []) as Array<Record<string, unknown>>
       const ticketRows = (ticketsResult.data ?? []) as Array<Record<string, unknown>>
       const orderRows = (ordersResult.data ?? []) as Array<Record<string, unknown>>
-
-      void settleProviderCommissionsFromOrders(orderRows)
 
       const providerBalanceRow =
         profileBalanceResult.data && typeof profileBalanceResult.data === 'object'
