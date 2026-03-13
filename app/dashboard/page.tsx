@@ -512,6 +512,8 @@ const PRODUCT_IMAGE_ALLOWED_TYPES = new Set([
   'image/webp',
   'image/avif',
 ])
+const MEDIA_UPLOAD_ENDPOINT = process.env.NEXT_PUBLIC_MEDIA_UPLOAD_URL || ''
+const MEDIA_UPLOAD_TOKEN = process.env.NEXT_PUBLIC_MEDIA_UPLOAD_TOKEN || ''
 
 const DASHBOARD_MENU_ITEMS: DashboardMenuItem[] = [
   { id: 'mis-productos', label: 'Mis productos' },
@@ -1591,6 +1593,53 @@ function bufferToBase64(buffer: ArrayBuffer) {
     binary += String.fromCharCode(bytes[i])
   }
   return typeof window !== 'undefined' && typeof window.btoa === 'function' ? window.btoa(binary) : btoa(binary)
+}
+
+type ExternalUploadResult = { ok: true; url: string } | { ok: false; message: string }
+
+async function uploadImageExternally(params: { file: File; objectPath: string; purpose: string }): Promise<ExternalUploadResult> {
+  if (!MEDIA_UPLOAD_ENDPOINT) {
+    return { ok: false, message: 'Configura NEXT_PUBLIC_MEDIA_UPLOAD_URL para subir archivos al hosting externo.' }
+  }
+
+  const formData = new FormData()
+  formData.append('file', params.file)
+  formData.append('path', params.objectPath)
+  formData.append('purpose', params.purpose)
+
+  const headers: Record<string, string> = {}
+  if (MEDIA_UPLOAD_TOKEN) headers['x-upload-token'] = MEDIA_UPLOAD_TOKEN
+
+  let response: Response
+  try {
+    response = await fetch(MEDIA_UPLOAD_ENDPOINT, {
+      method: 'POST',
+      body: formData,
+      headers,
+    })
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : 'No se pudo conectar al servidor de archivos.',
+    }
+  }
+
+  let payload: unknown = null
+  try {
+    payload = await response.json()
+  } catch {
+    payload = null
+  }
+
+  const payloadObject = payload as { url?: unknown; location?: unknown; publicUrl?: unknown; message?: unknown; error?: unknown } | null
+  const publicUrl = toText(payloadObject?.url || payloadObject?.location || payloadObject?.publicUrl)
+
+  if (!response.ok || !publicUrl) {
+    const message = toText(payloadObject?.message || payloadObject?.error) || `Upload falló (${response.status})`
+    return { ok: false, message }
+  }
+
+  return { ok: true, url: publicUrl }
 }
 
 export default function UserDashboardPage() {
@@ -3824,38 +3873,24 @@ export default function UserDashboardPage() {
     const ext = resolveFileExtension(file)
     const objectPath = `${userId}/${Date.now()}-${safeName}.${ext}`
 
-    const { error: uploadError } = await supabase.storage
-      .from(PRODUCT_IMAGE_BUCKET)
-      .upload(objectPath, file, {
-        cacheControl: '3600',
-        upsert: false,
-        contentType: file.type,
-      })
+    const uploadResult = await uploadImageExternally({
+      file,
+      objectPath,
+      purpose: 'product_logo',
+    })
 
-    if (uploadError) {
+    if (!uploadResult.ok) {
       setIsProviderImageUploading(false)
       setProviderMsgType('error')
-      setProviderMsg(
-        `No se pudo subir imagen. Verifica bucket '${PRODUCT_IMAGE_BUCKET}' y policy INSERT/SELECT. ${uploadError.message}`
-      )
+      setProviderMsg(`No se pudo subir la imagen al hosting externo. ${uploadResult.message}`)
       event.target.value = ''
       return
     }
 
-    const { data: publicData } = supabase.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(objectPath)
-    const publicUrl = toText(publicData.publicUrl)
-    if (!publicUrl) {
-      setIsProviderImageUploading(false)
-      setProviderMsgType('error')
-      setProviderMsg('La imagen se subio, pero no se pudo generar URL publica.')
-      event.target.value = ''
-      return
-    }
-
-    setProviderProductForm(previous => ({ ...previous, logo: publicUrl }))
+    setProviderProductForm(previous => ({ ...previous, logo: uploadResult.url }))
     setIsProviderImageUploading(false)
     setProviderMsgType('ok')
-    setProviderMsg('Imagen subida correctamente a Supabase.')
+    setProviderMsg('Imagen subida correctamente.')
     event.target.value = ''
   }
 
@@ -3892,37 +3927,23 @@ export default function UserDashboardPage() {
     const ext = resolveFileExtension(file)
     const objectPath = `${userId}/avatar-${Date.now()}-${safeName}.${ext}`
 
-    const { error: uploadError } = await supabase.storage
-      .from(PROVIDER_AVATAR_BUCKET)
-      .upload(objectPath, file, {
-        cacheControl: '3600',
-        upsert: true,
-        contentType: file.type,
-      })
+    const uploadResult = await uploadImageExternally({
+      file,
+      objectPath,
+      purpose: 'provider_avatar',
+    })
 
-    if (uploadError) {
+    if (!uploadResult.ok) {
       setIsProviderAvatarUploading(false)
       setProviderMsgType('error')
-      setProviderMsg(
-        `No se pudo subir foto de perfil. Revisa bucket '${PROVIDER_AVATAR_BUCKET}' y policies. ${uploadError.message}`
-      )
-      event.target.value = ''
-      return
-    }
-
-    const { data: publicData } = supabase.storage.from(PROVIDER_AVATAR_BUCKET).getPublicUrl(objectPath)
-    const publicUrl = toText(publicData.publicUrl)
-    if (!publicUrl) {
-      setIsProviderAvatarUploading(false)
-      setProviderMsgType('error')
-      setProviderMsg('La foto se subio, pero no se pudo generar URL publica.')
+      setProviderMsg(`No se pudo subir foto de perfil al hosting externo. ${uploadResult.message}`)
       event.target.value = ''
       return
     }
 
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ provider_avatar_url: publicUrl })
+      .update({ provider_avatar_url: uploadResult.url })
       .eq('id', userId)
 
     if (updateError) {
@@ -3937,7 +3958,7 @@ export default function UserDashboardPage() {
       previous
         ? {
             ...previous,
-            provider_avatar_url: publicUrl,
+            provider_avatar_url: uploadResult.url,
           }
         : previous
     )
@@ -3993,6 +4014,30 @@ export default function UserDashboardPage() {
     setProviderAccessGranted(true)
     setProviderPinError('')
     setProviderPinInput('')
+  }
+
+  async function settleProviderCommissionsFromOrders(orderRows: Array<Record<string, unknown>>) {
+    if (!userId || isOwner) return
+
+    const uniquePaidOrderIds = Array.from(
+      new Set(
+        orderRows
+          .map(row => {
+            const id = toText(row.id)
+            const status = toText(row.status)
+            return id && isPaidLikeOrderStatus(status) ? id : null
+          })
+          .filter(Boolean) as string[]
+      )
+    ).slice(0, 150)
+
+    for (const orderId of uniquePaidOrderIds) {
+      try {
+        await settleProviderCommissionForOrder(orderId, 'auto')
+      } catch {
+        // Silenciar para no romper el flujo de carga; la función RPC debe ser idempotente.
+      }
+    }
   }
 
   const loadProviderDashboardData = useCallback(async () => {
@@ -4061,6 +4106,9 @@ export default function UserDashboardPage() {
       const productRows = (productsResult.data ?? []) as Array<Record<string, unknown>>
       const ticketRows = (ticketsResult.data ?? []) as Array<Record<string, unknown>>
       const orderRows = (ordersResult.data ?? []) as Array<Record<string, unknown>>
+
+      void settleProviderCommissionsFromOrders(orderRows)
+
       const providerBalanceRow =
         profileBalanceResult.data && typeof profileBalanceResult.data === 'object'
           ? (profileBalanceResult.data as Record<string, unknown>)
@@ -7663,28 +7711,19 @@ export default function UserDashboardPage() {
     const ext = resolveFileExtension(file)
     const objectPath = `owner-name-filters/${userId}/${Date.now()}-${safeName}.${ext}`
 
-    const { error: uploadError } = await supabase.storage.from(PRODUCT_IMAGE_BUCKET).upload(objectPath, file, {
-      cacheControl: '3600',
-      upsert: false,
-      contentType: file.type,
+    const uploadResult = await uploadImageExternally({
+      file,
+      objectPath,
+      purpose: 'owner_product_filter_logo',
     })
-    if (uploadError) {
-      setOwnerMsg(
-        `No se pudo subir logo. Verifica bucket '${PRODUCT_IMAGE_BUCKET}' y policies. ${uploadError.message}`
-      )
+
+    if (!uploadResult.ok) {
+      setOwnerMsg(`No se pudo subir el logo al hosting externo. ${uploadResult.message}`)
       setOwnerMsgType('error')
       return null
     }
 
-    const { data: publicData } = supabase.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(objectPath)
-    const publicUrl = toText(publicData.publicUrl)
-    if (!publicUrl) {
-      setOwnerMsg('Logo subido, pero no se pudo obtener URL publica.')
-      setOwnerMsgType('error')
-      return null
-    }
-
-    return publicUrl
+    return uploadResult.url
   }
 
   async function handleOwnerNewFilterImageFileChange(event: ChangeEvent<HTMLInputElement>) {
