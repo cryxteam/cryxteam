@@ -672,7 +672,6 @@ export default function ProductsPage() {
   const [activeTermsProductId, setActiveTermsProductId] = useState<number | null>(null)
   const [comments, setComments] = useState<CommentCard[]>([])
   const [commentMessage, setCommentMessage] = useState('')
-  const [commentProduct, setCommentProduct] = useState('')
   const [commentRating, setCommentRating] = useState(5)
   const [commentSubmitting, setCommentSubmitting] = useState(false)
   const [commentFeedback, setCommentFeedback] = useState<string | null>(null)
@@ -1234,7 +1233,6 @@ export default function ProductsPage() {
 
   const handleCommentSubmit = async () => {
     const message = commentMessage.trim()
-    const productName = commentProduct.trim()
     const safeRating = Math.max(1, Math.min(5, Number(commentRating) || 5))
 
     if (message.length < 8) {
@@ -1252,7 +1250,7 @@ export default function ProductsPage() {
       .insert({
         author,
         message,
-        product_name: productName || null,
+        product_name: null,
         rating: safeRating,
         avatar_url: null,
         is_public: true,
@@ -1271,7 +1269,7 @@ export default function ProductsPage() {
       id: toIdText(data?.id, `local-${Date.now()}`),
       author: toText(data?.author, author),
       message,
-      productName: toText(data?.product_name, productName || 'Producto'),
+      productName: toText(data?.product_name, 'Producto'),
       rating: Number.isFinite(Number(data?.rating)) ? Number(data?.rating) : safeRating,
       avatarUrl: toText(data?.avatar_url),
       createdAt: toText(data?.created_at) || null,
@@ -1279,7 +1277,6 @@ export default function ProductsPage() {
 
     setComments(previous => [inserted, ...previous].slice(0, 120))
     setCommentMessage('')
-    setCommentProduct('')
     setCommentRating(5)
     setCommentFeedback('¡Gracias por tu comentario!')
     setIsCommentModalOpen(false)
@@ -1690,27 +1687,22 @@ export default function ProductsPage() {
                     placeholder='Comparte tu experiencia (mínimo 8 caracteres)'
                   />
                 </label>
-                <label className={styles.commentField}>
-                  <span>Producto (opcional)</span>
-                  <input
-                    type='text'
-                    value={commentProduct}
-                    onChange={event => setCommentProduct(event.target.value)}
-                    maxLength={80}
-                    placeholder='Ej: Netflix Perfil, Disney+ Cuenta...'
-                  />
-                </label>
-                <label className={styles.commentFieldInline}>
+                <div className={styles.ratingField}>
                   <span>Calificación</span>
-                  <input
-                    type='number'
-                    min={1}
-                    max={5}
-                    step='0.1'
-                    value={commentRating}
-                    onChange={event => setCommentRating(Number(event.target.value))}
-                  />
-                </label>
+                  <div className={styles.starRow}>
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <button
+                        key={`star-${star}`}
+                        type='button'
+                        className={`${styles.starButton} ${commentRating >= star ? styles.starActive : ''}`}
+                        onClick={() => setCommentRating(star)}
+                        aria-label={`${star} estrellas`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <button
                   type='button'
                   className={styles.commentSubmit}
