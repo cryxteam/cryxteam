@@ -177,7 +177,7 @@
 
 .menuPanel a {
   display: block;
-  padding: 10px;
+  padding: 12px;
   border-radius: 12px;
   text-decoration: none;
   color: #e2e8f0;
@@ -462,9 +462,9 @@
 .topServicesPanel ul {
   list-style: none;
   margin: 10px 0 0;
-  padding: 0;
+  padding: 4px 0;
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .topServicesPanel li {
@@ -593,15 +593,15 @@
 
 .commentsTrack {
   display: flex;
-  gap: 6px;
+  gap: 12px;
   width: max-content;
-  animation: commentsLoop 24s linear infinite;
+  animation: commentsLoop 28s linear infinite;
   padding: 0;
 }
 
 .commentCard {
-  min-width: 210px;
-  max-width: 280px;
+  min-width: 240px;
+  max-width: 320px;
   border: 1px solid rgba(148, 163, 184, 0.26);
   border-radius: 14px;
   padding: 10px;
@@ -662,8 +662,8 @@
 
 .commentBody {
   color: #dce7ff;
-  font-size: 0.88rem;
-  line-height: 1.35;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .commentFormShell {
@@ -684,7 +684,7 @@
 .commentField,
 .commentFieldInline {
   display: grid;
-  gap: 6px;
+  gap: 12px;
 }
 
 .commentField span,
@@ -1641,7 +1641,7 @@
   margin: 0;
   color: #dbe7ff;
   font-size: 0.8rem;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
 .purchaseProductInfo strong {
