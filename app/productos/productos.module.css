@@ -389,7 +389,7 @@
   margin-top: 14px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .topProductCard {
@@ -588,14 +588,14 @@
   position: relative;
   overflow: hidden;
   display: grid;
-  gap: 2px;
+  gap: 6px;
 }
 
 .commentsTrack {
   display: flex;
-  gap: 12px;
+  gap: 6px;
   width: max-content;
-  animation: commentsLoop 28s linear infinite;
+  animation: commentsLoop 26s linear infinite;
   padding: 0;
 }
 
@@ -604,7 +604,7 @@
   max-width: 320px;
   border: 1px solid rgba(148, 163, 184, 0.26);
   border-radius: 14px;
-  padding: 10px;
+  padding: 12px;
   background:
     radial-gradient(circle at 92% 12%, rgba(59, 130, 246, 0.14), transparent 36%),
     linear-gradient(150deg, #111622 0%, #0e121c 48%, #0a0d16 100%);

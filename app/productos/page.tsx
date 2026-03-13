@@ -1564,13 +1564,12 @@ export default function ProductsPage() {
         </section>
 
         <section className={styles.discoverLayout}>
-          {catalogViewportWidth >= 980 && (
-            <article className={styles.commentsPanel}>
-              <header className={styles.discoverHead}>
-                <div>
-                  <h2>{'\u{1F4AC}'} Comentarios</h2>
-                  <p>Opiniones reales de compradores recientes.</p>
-                </div>
+          <article className={styles.commentsPanel}>
+            <header className={styles.discoverHead}>
+              <div>
+                <h2>{'\u{1F4AC}'} Comentarios</h2>
+                <p>Opiniones reales de compradores recientes.</p>
+              </div>
                 <div className={styles.commentsActions}>
                   <span className={styles.discoverCounter}>{totalComments} comentarios</span>
                   <button
@@ -1620,7 +1619,6 @@ export default function ProductsPage() {
                 </div>
               )}
             </article>
-          )}
 
           <aside className={styles.recommendPanel}>
             <header className={styles.discoverHead}>
