@@ -3578,8 +3578,8 @@ export default function UserDashboardPage() {
     if (!customerPhone || !order.credentialsText) return ''
     const credentialInfo = resolveOrderCredentialForMessage(order)
     const lines = [
-      `${WA_EMOJI.check} Gracias por tu compra ${WA_EMOJI.handshake}${WA_EMOJI.sparkles}`,
-      `${WA_EMOJI.movie} *Producto:* *${order.productName}*`,
+      `${WA_EMOJI.check} ¡Gracias por tu compra! ${WA_EMOJI.handshake}${WA_EMOJI.sparkles}`,
+      `${WA_EMOJI.movie} *Acceso contratado:* *${order.productName}*`,
       '',
       `${WA_EMOJI.mail} *Correo:* ${credentialInfo.emailValue}`,
       `${WA_EMOJI.lock} *Contrasena:* ${credentialInfo.passwordValue}`,
@@ -3591,7 +3591,7 @@ export default function UserDashboardPage() {
         `${WA_EMOJI.pin} *PIN:* ${credentialInfo.pinValue}`
       )
     }
-    lines.push('', `Cualquier duda con el acceso me escribes ${WA_EMOJI.hands}`)
+    lines.push('', `¿Duda o problema? Respóndeme por aquí y te ayudo al toque ${WA_EMOJI.hands}`)
     return buildWhatsappUrl(customerPhone, lines)
   }
 
@@ -3600,8 +3600,8 @@ export default function UserDashboardPage() {
     if (!customerPhone || !order.credentialsText) return ''
     const credentialInfo = resolveOrderCredentialForMessage(order)
     const lines = [
-      `${WA_EMOJI.hourglass} *Aviso de vencimiento*`,
-      `Tu *${order.productName}* esta por vencer.`,
+      `${WA_EMOJI.hourglass} *Tu servicio está por vencer*`,
+      `Producto: *${order.productName}*`,
       '',
       `${WA_EMOJI.mail} *Correo:* ${credentialInfo.emailValue}`,
       `${WA_EMOJI.lock} *Contrasena:* ${credentialInfo.passwordValue}`,
@@ -3614,7 +3614,7 @@ export default function UserDashboardPage() {
       )
     }
 
-    lines.push('', `Si deseas *renovar* para seguir sin cortes, escribeme y lo coordinamos ${WA_EMOJI.check}`)
+    lines.push('', `Para renovar sin cortes, respóndeme *RENOVAR* y lo gestiono al toque ${WA_EMOJI.check}`)
     return buildWhatsappUrl(customerPhone, lines)
   }
 
