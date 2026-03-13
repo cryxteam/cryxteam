@@ -676,6 +676,7 @@ export default function ProductsPage() {
   const [commentRating, setCommentRating] = useState(5)
   const [commentSubmitting, setCommentSubmitting] = useState(false)
   const [commentFeedback, setCommentFeedback] = useState<string | null>(null)
+  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -1218,6 +1219,19 @@ export default function ProductsPage() {
     return Math.max(18, Math.min(48, base || 18))
   }, [commentCards])
 
+  const commentRows = useMemo(() => {
+    const rowA: CommentCard[] = []
+    const rowB: CommentCard[] = []
+    commentCards.forEach((card, index) => {
+      if (index % 2 === 0) rowA.push(card)
+      else rowB.push(card)
+    })
+    // Si hay muy pocos, duplicamos para llenar dos filas
+    if (rowA.length === 0 && rowB.length > 0) rowA.push(...rowB)
+    if (rowB.length === 0 && rowA.length > 0) rowB.push(...rowA)
+    return { rowA, rowB }
+  }, [commentCards])
+
   const handleCommentSubmit = async () => {
     const message = commentMessage.trim()
     const productName = commentProduct.trim()
@@ -1268,6 +1282,7 @@ export default function ProductsPage() {
     setCommentProduct('')
     setCommentRating(5)
     setCommentFeedback('¡Gracias por tu comentario!')
+    setIsCommentModalOpen(false)
   }
 
   const recommendationProducts = useMemo(() => {
@@ -1564,10 +1579,7 @@ export default function ProductsPage() {
                   <button
                     type='button'
                     className={styles.commentCta}
-                    onClick={() => {
-                      const form = document.getElementById('comment-form')
-                      form?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                    }}
+                    onClick={() => setIsCommentModalOpen(true)}
                   >
                     Deja tu comentario
                   </button>
@@ -1577,80 +1589,39 @@ export default function ProductsPage() {
                 <p className={styles.commentsEmpty}>Aún no hay comentarios.</p>
               ) : (
                 <div className={styles.commentsMarquee} aria-label='Comentarios de clientes'>
-                  <div
-                    className={styles.commentsTrack}
-                    style={{ animationDuration: `${commentTrackDuration}s` }}
-                  >
-                    {[...commentCards, ...commentCards].map((comment, index) => (
-                      <figure key={`${comment.id}-${index}`} className={styles.commentCard}>
-                        <div className={styles.commentMeta}>
-                          <span
-                            className={styles.commentAvatar}
-                            style={
-                              comment.avatarUrl
-                                ? { backgroundImage: `url(${comment.avatarUrl})` }
-                                : undefined
-                            }
-                            aria-hidden
-                          >
-                            {!comment.avatarUrl && commentInitials(comment.author)}
-                          </span>
-                          <div className={styles.commentText}>
-                            <strong>{comment.author}</strong>
-                            <small>{comment.productName}</small>
+                  {[commentRows.rowA, commentRows.rowB].map((row, rowIndex) => (
+                    <div
+                      key={`track-${rowIndex}`}
+                      className={styles.commentsTrack}
+                      style={{ animationDuration: `${commentTrackDuration}s` }}
+                    >
+                      {[...row, ...row].map((comment, index) => (
+                        <figure key={`${comment.id}-${rowIndex}-${index}`} className={styles.commentCard}>
+                          <div className={styles.commentMeta}>
+                            <span
+                              className={styles.commentAvatar}
+                              style={
+                                comment.avatarUrl
+                                  ? { backgroundImage: `url(${comment.avatarUrl})` }
+                                  : undefined
+                              }
+                              aria-hidden
+                            >
+                              {!comment.avatarUrl && commentInitials(comment.author)}
+                            </span>
+                            <div className={styles.commentText}>
+                              <strong>{comment.author}</strong>
+                              <small>{comment.productName}</small>
+                            </div>
+                            <span className={styles.commentRating}>★ {comment.rating.toFixed(1)}</span>
                           </div>
-                          <span className={styles.commentRating}>★ {comment.rating.toFixed(1)}</span>
-                        </div>
-                        <figcaption className={styles.commentBody}>{comment.message}</figcaption>
-                      </figure>
-                    ))}
-                  </div>
+                          <figcaption className={styles.commentBody}>{comment.message}</figcaption>
+                        </figure>
+                      ))}
+                    </div>
+                  ))}
                 </div>
               )}
-
-              <div className={styles.commentFormShell} id='comment-form'>
-                <div className={styles.commentFormGrid}>
-                  <label className={styles.commentField}>
-                    <span>Comentario</span>
-                    <textarea
-                      value={commentMessage}
-                      onChange={event => setCommentMessage(event.target.value)}
-                      maxLength={400}
-                      placeholder='Comparte tu experiencia (mínimo 8 caracteres)'
-                    />
-                  </label>
-                  <label className={styles.commentField}>
-                    <span>Producto (opcional)</span>
-                    <input
-                      type='text'
-                      value={commentProduct}
-                      onChange={event => setCommentProduct(event.target.value)}
-                      maxLength={80}
-                      placeholder='Ej: Netflix Perfil, Disney+ Cuenta...'
-                    />
-                  </label>
-                  <label className={styles.commentFieldInline}>
-                    <span>Calificación</span>
-                    <input
-                      type='number'
-                      min={1}
-                      max={5}
-                      step='0.1'
-                      value={commentRating}
-                      onChange={event => setCommentRating(Number(event.target.value))}
-                    />
-                  </label>
-                  <button
-                    type='button'
-                    className={styles.commentSubmit}
-                    onClick={() => void handleCommentSubmit()}
-                    disabled={commentSubmitting}
-                  >
-                    {commentSubmitting ? 'Enviando...' : 'Enviar comentario'}
-                  </button>
-                </div>
-                {commentFeedback && <p className={styles.commentFeedback}>{commentFeedback}</p>}
-              </div>
             </article>
           )}
 
@@ -1699,6 +1670,60 @@ export default function ProductsPage() {
             </ul>
           </aside>
         </section>
+
+        {isCommentModalOpen && (
+          <div className={styles.modalOverlay} role='dialog' aria-modal='true'>
+            <div className={styles.modalCard}>
+              <div className={styles.modalHead}>
+                <h3>Deja tu comentario</h3>
+                <button type='button' className={styles.modalClose} onClick={() => setIsCommentModalOpen(false)}>
+                  ×
+                </button>
+              </div>
+              <div className={styles.commentFormGrid}>
+                <label className={styles.commentField}>
+                  <span>Comentario</span>
+                  <textarea
+                    value={commentMessage}
+                    onChange={event => setCommentMessage(event.target.value)}
+                    maxLength={400}
+                    placeholder='Comparte tu experiencia (mínimo 8 caracteres)'
+                  />
+                </label>
+                <label className={styles.commentField}>
+                  <span>Producto (opcional)</span>
+                  <input
+                    type='text'
+                    value={commentProduct}
+                    onChange={event => setCommentProduct(event.target.value)}
+                    maxLength={80}
+                    placeholder='Ej: Netflix Perfil, Disney+ Cuenta...'
+                  />
+                </label>
+                <label className={styles.commentFieldInline}>
+                  <span>Calificación</span>
+                  <input
+                    type='number'
+                    min={1}
+                    max={5}
+                    step='0.1'
+                    value={commentRating}
+                    onChange={event => setCommentRating(Number(event.target.value))}
+                  />
+                </label>
+                <button
+                  type='button'
+                  className={styles.commentSubmit}
+                  onClick={() => void handleCommentSubmit()}
+                  disabled={commentSubmitting}
+                >
+                  {commentSubmitting ? 'Enviando...' : 'Enviar comentario'}
+                </button>
+              </div>
+              {commentFeedback && <p className={styles.commentFeedback}>{commentFeedback}</p>}
+            </div>
+          </div>
+        )}
 
         <section className={styles.searchSection}>
           <h2>{'\u{1F50E}'} Busca tu producto</h2>
