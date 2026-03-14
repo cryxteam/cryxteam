@@ -4425,7 +4425,7 @@ export default function UserDashboardPage() {
         .maybeSingle()
       const providerLimitQuery = supabase
         .from('provider_limits')
-        .select('id,provider_id,max_products,max_accounts,max_slots,updated_at')
+        .select('id,provider_id,user_id,max_products,updated_at')
         .eq('provider_id', userId)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -4486,7 +4486,7 @@ export default function UserDashboardPage() {
       } else if (!providerLimitResult.error) {
         const providerLimitByUser = await supabase
           .from('provider_limits')
-          .select('id,user_id,provider_id,max_products,max_accounts,max_slots,updated_at')
+          .select('id,provider_id,user_id,max_products,updated_at')
           .eq('user_id', userId)
           .order('updated_at', { ascending: false })
           .limit(1)
@@ -6231,7 +6231,7 @@ export default function UserDashboardPage() {
 
       const limitByProvider = await supabase
         .from('provider_limits')
-        .select('id,provider_id,max_products,max_accounts,max_slots,updated_at')
+        .select('id,provider_id,user_id,max_products,updated_at')
         .eq('provider_id', userId)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -6249,7 +6249,7 @@ export default function UserDashboardPage() {
       } else if (!limitByProvider.error || isLikelySchemaError(limitByProvider.error?.message ?? '')) {
         const limitByUser = await supabase
           .from('provider_limits')
-          .select('id,user_id,provider_id,max_products,max_accounts,max_slots,updated_at')
+          .select('id,provider_id,user_id,max_products,updated_at')
           .eq('user_id', userId)
           .order('updated_at', { ascending: false })
           .limit(1)
@@ -6966,7 +6966,7 @@ export default function UserDashboardPage() {
             .select('id,status,type,buyer_id,provider_id,product_id,created_at,updated_at')
             .order('created_at', { ascending: false })
             .limit(800),
-          supabase.from('provider_limits').select('id,provider_id,max_products,max_accounts,max_slots,updated_at').limit(500),
+          supabase.from('provider_limits').select('id,provider_id,user_id,max_products,updated_at').limit(500),
         ])
 
       if (profilesResult.error) {
