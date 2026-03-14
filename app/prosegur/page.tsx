@@ -313,11 +313,11 @@ const categories: Category[] = [
 
             <div className={styles.orderLayout}>
               <div className={styles.formPanel}>
-                <div className={styles.chipPanel}>
-                  <div className={styles.chipRowWide}>
-                    {categories.map(cat => (
-                      <button
-                        key={cat.id}
+              <div className={styles.chipPanel}>
+                <div className={styles.chipRowWide}>
+                  {categories.map(cat => (
+                    <button
+                      key={cat.id}
                         type='button'
                         className={`${styles.chipButton} ${selectedCategory === cat.id ? styles.chipButtonActive : ''}`}
                         onClick={() => setSelectedCategory(cat.id)}
@@ -343,6 +343,7 @@ const categories: Category[] = [
                 <label className={styles.inputBlock}>
                   <span>Buscar servicio</span>
                   <input
+                    className={styles.searchInput}
                     type='text'
                     placeholder='Busca por nombre...'
                     value={searchTerm}
@@ -403,15 +404,10 @@ const categories: Category[] = [
                   </small>
                 </label>
 
-                <label className={`${styles.inputBlock} ${styles.inlineRow}`}>
-                  <span>Drip-feed</span>
-                  <input type='checkbox' />
-                </label>
-
-                <div className={styles.inputBlock}>
-                  <span>Tiempo promedio</span>
-                  <div className={styles.readonlyField}>{selectedService?.avgTime ?? 'N/D'}</div>
-                </div>
+              <div className={styles.inputBlock}>
+                <span>Tiempo promedio</span>
+                <div className={styles.readonlyField}>{selectedService?.avgTime ?? 'N/D'}</div>
+              </div>
 
                 <div className={styles.pricingRow}>
                   <div>

@@ -1760,14 +1760,27 @@ export default function UserDashboardPage() {
   const [providerBuyerModal, setProviderBuyerModal] = useState<ProviderBuyerModalState | null>(null)
 const [providerProductForm, setProviderProductForm] = useState<ProviderFormState>(PROVIDER_FORM_DEFAULT)
 const [followersForm, setFollowersForm] = useState({
-  categoria: 'Seguidores',
-  plataforma: 'Instagram',
+  categoria: '',
+  plataforma: '',
   descripcion: '',
   detalles: '',
   notas: '',
   precioPorMil: '',
   tiempoPromedio: '',
 })
+const [followerPackages, setFollowerPackages] = useState<
+  {
+    id: string
+    categoria: string
+    plataforma: string
+    descripcion: string | null
+    detalles: string | null
+    notas: string | null
+    precio_por_mil: number
+    tiempo_promedio: string | null
+  }[]
+>([])
+const [isSavingFollower, setIsSavingFollower] = useState(false)
   const [providerOrderDrafts, setProviderOrderDrafts] = useState<Record<string, ProviderOrderDraft>>({})
   const [providerOrderSaving, setProviderOrderSaving] = useState<Record<string, boolean>>({})
   const [providerTicketDrafts, setProviderTicketDrafts] = useState<Record<string, ProviderTicketDraft>>({})
@@ -3974,6 +3987,7 @@ const [followersForm, setFollowersForm] = useState({
   const isOwnerOrAdmin = isOwner || isAdmin
   const isProvider = normalizedRole === 'provider'
   const isVyron = (normalizeDisplayName(profile?.username) || '').toLowerCase() === 'vyron'
+  const providerId = profile?.id ?? user?.id ?? ''
   const canSeeProvider = isProvider || isOwner
   const canSeeAdminAccounts = isOwnerOrAdmin
   const providerDisplayName = normalizeDisplayName(profile?.username) || 'Proveedor'
@@ -9364,28 +9378,22 @@ const [followersForm, setFollowersForm] = useState({
                   <div className={styles.providerFollowersGrid}>
                     <label className={styles.inputBlock}>
                       <span>Categoría</span>
-                      <select
+                      <input
+                        type='text'
                         value={followersForm.categoria}
                         onChange={e => setFollowersForm(form => ({ ...form, categoria: e.target.value }))}
-                      >
-                        <option>Seguidores</option>
-                        <option>Likes</option>
-                        <option>Vistas</option>
-                        <option>Comentarios</option>
-                      </select>
+                        placeholder='Likes, Seguidores, Vistas...'
+                      />
                     </label>
 
                     <label className={styles.inputBlock}>
                       <span>Plataforma</span>
-                      <select
+                      <input
+                        type='text'
                         value={followersForm.plataforma}
                         onChange={e => setFollowersForm(form => ({ ...form, plataforma: e.target.value }))}
-                      >
-                        <option>Instagram</option>
-                        <option>TikTok</option>
-                        <option>Facebook</option>
-                        <option>YouTube</option>
-                      </select>
+                        placeholder='Instagram, TikTok, YouTube...'
+                      />
                     </label>
 
                     <label className={styles.inputBlock}>
@@ -9441,7 +9449,38 @@ const [followersForm, setFollowersForm] = useState({
                     </label>
                   </div>
 
-                  <p className={styles.helperText}>Solo UI por ahora; conecta a Supabase cuando definamos la tabla.</p>
+                  <div className={styles.providerFollowersActions}>
+                    <button
+                      type='button'
+                      className={styles.primaryBtn}
+                      disabled={isSavingFollower}
+                      onClick={async () => {
+                        if (!providerId) return
+                        setIsSavingFollower(true)
+                        await supabase.from('follower_packages').insert({
+                          provider_id: providerId,
+                          categoria: followersForm.categoria.trim() || 'Seguidores',
+                          plataforma: followersForm.plataforma.trim() || 'Instagram',
+                          descripcion: followersForm.descripcion.trim() || null,
+                          detalles: followersForm.detalles.trim() || null,
+                          notas: followersForm.notas.trim() || null,
+                          precio_por_mil: Number(followersForm.precioPorMil || 0),
+                          tiempo_promedio: followersForm.tiempoPromedio.trim() || null,
+                        })
+                        const { data: pkgRows } = await supabase
+                          .from('follower_packages')
+                          .select(
+                            'id,categoria,plataforma,descripcion,detalles,notas,precio_por_mil,tiempo_promedio'
+                          )
+                          .eq('provider_id', providerId)
+                          .order('created_at', { ascending: false })
+                        if (pkgRows) setFollowerPackages(pkgRows)
+                        setIsSavingFollower(false)
+                      }}
+                    >
+                      {isSavingFollower ? 'Guardando...' : 'Guardar paquete'}
+                    </button>
+                  </div>
                 </section>
               )}
               {!isOwner && providerLimitUnknown && (
