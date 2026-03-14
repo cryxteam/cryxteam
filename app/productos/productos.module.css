@@ -739,26 +739,9 @@
 
 .commentMeta {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 8px;
-}
-
-.commentAvatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background:
-    linear-gradient(135deg, rgba(59, 130, 246, 0.6), rgba(139, 92, 246, 0.6)),
-    #0f172a;
-  color: #e0e7ff;
-  font-weight: 800;
-  font-size: 0.9rem;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background-size: cover;
-  background-position: center;
 }
 
 .commentText strong {

@@ -124,44 +124,7 @@ type CommentCard = {
 
 const COMMENTS_TABLE = 'product_comments'
 
-const FALLBACK_COMMENTS: CommentCard[] = [
-  {
-    id: 'fallback-1',
-    author: 'Anahí Q.',
-    message: 'Atención rápida y las credenciales llegaron al toque. Recomiendo el plan familiar.',
-    productName: 'Spotify Familiar',
-    rating: 5,
-    avatarUrl: '',
-    createdAt: null,
-  },
-  {
-    id: 'fallback-2',
-    author: 'Luis M.',
-    message: 'Prime Video listo en minutos, todo claro y sin recargos escondidos.',
-    productName: 'Prime Video',
-    rating: 4.8,
-    avatarUrl: '',
-    createdAt: null,
-  },
-  {
-    id: 'fallback-3',
-    author: 'Carla R.',
-    message: 'Compré Disney para mis hijos y funciona perfecto. Buen soporte por WhatsApp.',
-    productName: 'Disney+ Perfil',
-    rating: 5,
-    avatarUrl: '',
-    createdAt: null,
-  },
-  {
-    id: 'fallback-4',
-    author: 'Jorge T.',
-    message: 'Me resolvieron una duda en segundos. Entregaron HBO Max al instante.',
-    productName: 'HBO Max',
-    rating: 4.9,
-    avatarUrl: '',
-    createdAt: null,
-  },
-]
+const FALLBACK_COMMENTS: CommentCard[] = []
 
 function formatPrice(value: number) {
   return `S/ ${value.toFixed(2)}`
@@ -1594,20 +1557,8 @@ export default function ProductsPage() {
                       {[...row, ...row].map((comment, index) => (
                         <figure key={`${comment.id}-${rowIndex}-${index}`} className={styles.commentCard}>
                           <div className={styles.commentMeta}>
-                            <span
-                              className={styles.commentAvatar}
-                              style={
-                                comment.avatarUrl
-                                  ? { backgroundImage: `url(${comment.avatarUrl})` }
-                                  : undefined
-                              }
-                              aria-hidden
-                            >
-                              {!comment.avatarUrl && commentInitials(comment.author)}
-                            </span>
                             <div className={styles.commentText}>
                               <strong>{comment.author}</strong>
-                              <small>{comment.productName}</small>
                             </div>
                             <span className={styles.commentRating}>★ {comment.rating.toFixed(1)}</span>
                           </div>
