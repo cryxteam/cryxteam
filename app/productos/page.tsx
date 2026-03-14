@@ -1380,7 +1380,9 @@ export default function ProductsPage() {
   }, [products, activeTermsProductId])
 
   const canPurchase = viewerMode === 'affiliate'
-  const priceLabel = canPurchase ? 'Precio distribuidor' : 'Precio publico'
+  const priceVisibilityCopy = canPurchase
+    ? 'Precios de distribuidor'
+    : 'Precios inflados (afíliate para ver los precios más bajos :)'
   const sideOffset = Math.sin(scrollY / 170) * 104
   const navClass = (isActive: boolean, isAccount = false) =>
     `${styles.navLink} ${isActive ? styles.navActive : ''} ${isAccount ? styles.accountLink : ''}`.trim()
@@ -1678,25 +1680,49 @@ export default function ProductsPage() {
         )}
 
         <section className={styles.searchSection}>
-          <h2>{'\u{1F50E}'} Busca tu producto</h2>
-          <p>
-            {'\u{1F4B8}'} {priceLabel} visible para esta sesion.
-            {isLoggedIn && !isAffiliateEnabled ? ' \u26A1 Activa afiliacion para poder comprar.' : ''}
-          </p>
-          <div className={styles.searchBox}>
-            <input
-              type='search'
-              value={searchTerm}
-              onChange={event => {
-                setSearchTerm(event.target.value)
-                setCatalogPage(1)
-              }}
-              placeholder='Busca un producto...'
-              aria-label='Buscar productos'
-            />
-            <span>
-              Buscar {'\u{1F50D}'}
-            </span>
+          <div className={styles.searchHero}>
+            <div className={styles.searchHeader}>
+              <span className={styles.searchLogoWrap} aria-hidden='true'>
+                <Image src='/logo-mark.png' alt='' width={54} height={54} className={styles.searchLogo} priority />
+              </span>
+              <div className={styles.searchTitleBlock}>
+                <p className={styles.searchEyebrow}>Explora el catálogo</p>
+                <h2>Busca tu producto</h2>
+                <p className={styles.pricePill}>
+                  <span aria-hidden='true'>💠</span>
+                  {priceVisibilityCopy}
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.searchBarWrap}>
+              <div className={styles.searchGlow} aria-hidden='true' />
+              <div className={styles.searchBar}>
+                <span className={styles.searchInputIcon} aria-hidden='true'>
+                  ✨
+                </span>
+                <input
+                  type='search'
+                  value={searchTerm}
+                  onChange={event => {
+                    setSearchTerm(event.target.value)
+                    setCatalogPage(1)
+                  }}
+                  placeholder='Busca servicios, categorías o proveedores...'
+                  aria-label='Buscar productos'
+                />
+                <button
+                  type='button'
+                  className={styles.searchButton}
+                  onClick={() => setCatalogPage(1)}
+                >
+                  Buscar
+                  <span className={styles.searchButtonIcon} aria-hidden='true'>
+                    🚀
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
         </section>
 

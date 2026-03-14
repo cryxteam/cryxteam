@@ -13078,7 +13078,6 @@ export default function UserDashboardPage() {
                           ? 'A pedido'
                           : `${providerInventoryAccounts?.length || 2} con stock`}
                       </span>
-                      <span className={styles.imageEditorPrice}>S/ {providerProductForm.priceGuest || '0.00'}</span>
                     </div>
                   </div>
 
