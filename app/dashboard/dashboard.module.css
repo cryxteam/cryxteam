@@ -1666,6 +1666,15 @@
   gap: 12px;
 }
 
+.chipFreeInput {
+  min-width: 180px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #0c121d;
+  color: #e8ecff;
+}
+
 .providerCreateBlock {
   gap: 12px;
 }

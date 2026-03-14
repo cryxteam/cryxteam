@@ -119,18 +119,18 @@ export default function ProsegurPage() {
     { id: 'terminos', label: 'Terminos' },
   ]
 
-  const categories: Category[] = [
-    { id: 'instagram', label: 'Instagram' },
-    { id: 'facebook', label: 'Facebook' },
-    { id: 'youtube', label: 'Youtube' },
-    { id: 'twitter', label: 'Twitter' },
-    { id: 'spotify', label: 'Spotify' },
-    { id: 'tiktok', label: 'Tiktok' },
-    { id: 'telegram', label: 'Telegram' },
-    { id: 'web', label: 'Website' },
-    { id: 'otro', label: 'Otro' },
-    { id: 'todo', label: 'Todo' },
-  ]
+const categories: Category[] = [
+  { id: 'instagram', label: 'Instagram' },
+  { id: 'facebook', label: 'Facebook' },
+  { id: 'youtube', label: 'Youtube' },
+  { id: 'twitter', label: 'Twitter' },
+  { id: 'spotify', label: 'Spotify' },
+  { id: 'tiktok', label: 'Tiktok' },
+  { id: 'telegram', label: 'Telegram' },
+  { id: 'web', label: 'Website' },
+  { id: 'otro', label: 'Otro' },
+  { id: 'todo', label: 'Todo' },
+]
 
   const services: ServiceOption[] = [
     {
@@ -325,6 +325,18 @@ export default function ProsegurPage() {
                         {cat.label}
                       </button>
                     ))}
+                    <input
+                      list='categoria-sugerencias'
+                      className={styles.chipFreeInput}
+                      placeholder='Escribe tu categoría'
+                      value={selectedCategory}
+                      onChange={e => setSelectedCategory(e.target.value)}
+                    />
+                    <datalist id='categoria-sugerencias'>
+                      {categories.map(cat => (
+                        <option key={`opt-${cat.id}`} value={cat.label} />
+                      ))}
+                    </datalist>
                   </div>
                 </div>
 
