@@ -196,7 +196,7 @@ const AFFILIATE_PRIZES = [
   'S/8 directo a tu billetera',
   'Un perfil gratis (no incluye Netflix)',
   'Cashback 2% por 7 días',
-  'Mystery drop: fondo animado + cupón sorpresa',
+  'Cashback 3% por 15 días',
   'Ticket extra de raspa y gana',
   'Revisión manual exprés si algo falla en tu próximo pedido',
 ]
@@ -3065,17 +3065,93 @@ export default function UserDashboardPage() {
     return AFFILIATE_PRIZES[Math.floor(Math.random() * AFFILIATE_PRIZES.length)]
   }
 
+  const grantFreeProfileReward = async (targetUserId: string) => {
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select('id, provider_id, price_affiliate, price_guest, price_logged, renewal_price, price_renewal, delivery_mode, account_type, duration_days')
+      .eq('account_type', 'profiles')
+      .limit(20)
+
+    if (productsError) throw productsError
+    const list = (products ?? []).filter(row => row.id && row.provider_id)
+    if (list.length === 0) throw new Error('No hay productos de tipo perfil para regalar.')
+
+    const product = list[Math.floor(Math.random() * list.length)]
+    const price = Math.max(
+      0,
+      toNumber(
+        product.price_affiliate ??
+          product.price_guest ??
+          product.price_logged ??
+          product.renewal_price ??
+          product.price_renewal ??
+          0,
+        0
+      )
+    )
+    const nowIso = new Date().toISOString()
+    const durationDays = toNullableNumber(product.duration_days)
+    const expiresAt = durationDays ? new Date(Date.now() + durationDays * 86400000).toISOString() : null
+
+    const { data: orderRow, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        buyer_id: targetUserId,
+        provider_id: product.provider_id,
+        product_id: product.id,
+        status: 'delivered',
+        price_paid: price,
+        delivery_mode: toText(product.delivery_mode) || 'instant',
+        account_type: toText(product.account_type) || 'profiles',
+        duration_days: durationDays,
+        starts_at: nowIso,
+        expires_at: expiresAt,
+        paid_at: nowIso,
+        delivered_at: nowIso,
+      })
+      .select('id')
+      .single()
+    if (orderError) throw orderError
+
+    const { data: providerRow, error: providerError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', product.provider_id)
+      .maybeSingle()
+    if (providerError) throw providerError
+
+    const providerBalanceColumn =
+      PROVIDER_BALANCE_KEYS.find(key => Object.prototype.hasOwnProperty.call(providerRow ?? {}, key)) ??
+      'provider_balance'
+    const providerBalanceCurrent = Math.max(0, toNumber(providerRow?.[providerBalanceColumn], 0))
+    const commission = 0.5
+    const providerCredit = Math.max(0, price - commission)
+    const nextProviderBalance = Number((providerBalanceCurrent + providerCredit).toFixed(2))
+
+    const { error: providerUpdateError } = await supabase
+      .from('profiles')
+      .update({ [providerBalanceColumn]: nextProviderBalance })
+      .eq('id', product.provider_id)
+    if (providerUpdateError) throw providerUpdateError
+
+    return { orderId: orderRow?.id, productId: product.id }
+  }
+
   const applyAffiliatePrize = async (prize: string) => {
-    if (!profile?.id || affiliatePrizeAppliedRef.current) return
+    const targetUserId = profile?.id || userId
+    if (!targetUserId || affiliatePrizeAppliedRef.current) return
 
     // Efectos por premio
     const prizeEffects: Record<
       string,
-      { credit?: number; cashbackRate?: number; cashbackDays?: number }
+      { credit?: number; cashbackRate?: number; cashbackDays?: number; freeProfile?: boolean; extraTicket?: boolean }
     > = {
       'S/10 de descuento en tu siguiente compra': { credit: 10 },
       'S/8 directo a tu billetera': { credit: 8 },
       'Cashback 2% por 7 días': { cashbackRate: 0.02, cashbackDays: 7 },
+      'Cashback 3% por 15 días': { cashbackRate: 0.03, cashbackDays: 15 },
+      'Un perfil gratis (no incluye Netflix)': { freeProfile: true },
+      'Ticket extra de raspa y gana': { extraTicket: true },
       '🎖 Premio raro: S/500 en créditos + prioridad 6 meses': { credit: 500 },
     }
 
@@ -3086,7 +3162,7 @@ export default function UserDashboardPage() {
       const updates: Record<string, unknown> = {}
 
       if (effect.credit) {
-        const nextBalance = Math.max(0, toNumber(profile.balance, 0) + effect.credit)
+        const nextBalance = Math.max(0, toNumber(profile?.balance, 0) + effect.credit)
         updates.balance = nextBalance
       }
 
@@ -3097,11 +3173,15 @@ export default function UserDashboardPage() {
         updates.cashback_expires_at = expires.toISOString()
       }
 
+      if (effect.freeProfile) {
+        await grantFreeProfileReward(targetUserId)
+      }
+
       if (Object.keys(updates).length > 0) {
         const { error, data } = await supabase
           .from('profiles')
           .update(updates)
-          .eq('id', profile.id)
+          .eq('id', targetUserId)
           .select('balance, cashback_rate, cashback_expires_at')
           .maybeSingle()
         if (error) throw error
@@ -3121,10 +3201,23 @@ export default function UserDashboardPage() {
         }
       }
 
-      // Log opcional del premio entregado
-      await supabase.from('prize_logs').insert({ user_id: profile.id, prize }).select('id').single()
+      // Log del premio
+      await supabase.from('prize_logs').insert({ user_id: targetUserId, prize }).select('id').single()
 
       affiliatePrizeAppliedRef.current = true
+
+      // Ticket extra: dispara un premio adicional
+      if (effect.extraTicket) {
+        affiliatePrizeAppliedRef.current = false
+        let nextPrize = pickAffiliatePrize()
+        for (let i = 0; i < 4 && nextPrize === 'Ticket extra de raspa y gana'; i += 1) {
+          nextPrize = pickAffiliatePrize()
+        }
+        setAffiliatePrize(nextPrize)
+        setAffiliatePrizeRevealed(false)
+        setShowAffiliatePrize(true)
+        await applyAffiliatePrize(nextPrize)
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo entregar el premio'
       setAffiliateMsg(message)
