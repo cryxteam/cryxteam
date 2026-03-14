@@ -3218,6 +3218,11 @@ export default function UserDashboardPage() {
         setShowAffiliatePrize(true)
         await applyAffiliatePrize(nextPrize)
       }
+
+      // Feedback y cierre
+      setAffiliateMsg('Premio reclamado')
+      setAffiliateMsgType('ok')
+      closeAffiliatePrize()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo entregar el premio'
       setAffiliateMsg(message)

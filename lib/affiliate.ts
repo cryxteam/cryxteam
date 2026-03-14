@@ -161,8 +161,18 @@ export async function affiliateUserByUsernameAction(params: {
 
   if (hasReferredByColumn) {
     const updatePayloads: Array<Record<string, unknown>> = [
-      { referred_by: params.referrerUserId, afiliador: params.referrerUserId, is_distributor: true, is_approved: true },
-      { referred_by: params.referrerUserId, afiliador: params.referrerUserId, is_distributor: true },
+      {
+        referred_by: params.referrerUserId,
+        afiliador: params.referrerUserId,
+        is_distributor: true,
+        is_approved: true,
+      },
+      {
+        referred_by: params.referrerUserId,
+        afiliador: params.referrerUserId,
+        is_distributor: true,
+        is_approved: true,
+      },
     ]
 
     for (const payload of updatePayloads) {
