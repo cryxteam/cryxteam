@@ -21,6 +21,7 @@ function normalizeAffiliateRpcCode(value: unknown): AffiliateActionCode | null {
   if (text === 'CANNOT_SELF_AFFILIATE') return 'CANNOT_SELF_AFFILIATE'
   if (text === 'ALREADY_AFFILIATED') return 'ALREADY_AFFILIATED'
   if (text === 'NOT_AUTHENTICATED') return 'NOT_AUTHENTICATED'
+  if (text === 'PERMISSION_DENIED') return 'PERMISSION_DENIED'
   return null
 }
 
@@ -66,8 +67,9 @@ export async function affiliateUserByUsernameAction(params: {
   let targetResolvedUsername = normalizedTarget
 
   for (const candidate of usernameCandidates) {
-    const rpcResponse = await params.supabase.rpc('affiliate_user_by_username', {
+    const rpcResponse = await params.supabase.rpc('affiliate_set_referrer', {
       target_username: candidate,
+      referrer_id: params.referrerUserId,
     })
 
     if (!rpcResponse.error) {

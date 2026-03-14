@@ -3220,7 +3220,7 @@ export default function UserDashboardPage() {
       }
 
       affiliatePrizeAppliedRef.current = true
-      setAffiliateMsg('Premio reclamado')
+      setAffiliateMsg('🎉 Premio acreditado automáticamente')
       setAffiliateMsgType('ok')
       setShowAffiliatePrize(false)
       setAffiliatePrizeRevealed(false)
