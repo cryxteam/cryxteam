@@ -310,33 +310,12 @@ export default function InicioPage() {
         const loadProducts = async () => {
           const { data: rowsRaw, error } = await supabase
             .from('products')
-            .select(
-              [
-                'id',
-                'name',
-                'description',
-                'terms_and_conditions',
-                'image_url',
-                'provider_id',
-                'price_guest',
-                'price_affiliate',
-                'price_logged',
-                'renewal_price',
-                'account_type',
-                'renewable',
-                'duration_days',
-                'stock_available',
-                'delivery_mode',
-                'is_active',
-                'created_at',
-              ].join(',')
-            )
+            .select('*')
             .order('created_at', { ascending: false })
-            .limit(120)
 
           if (!mounted) return
 
-          const rows = (rowsRaw ?? []) as unknown as Record<string, unknown>[]
+          const rows = (rowsRaw ?? []) as Record<string, unknown>[]
           if (error || rows.length === 0) {
             setProducts([])
             appendMsg('No se pudo cargar la lista destacada desde DB.')
