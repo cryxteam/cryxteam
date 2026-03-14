@@ -8673,10 +8673,50 @@
   width: 100%;
 }
 
+.imageEditorCardPreview {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.96));
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  box-shadow:
+    0 16px 26px rgba(2, 6, 23, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.imageEditorBadgeRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.imageEditorPill {
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: #e2e8f0;
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+
+.imageEditorPillSuccess {
+  background: rgba(22, 163, 74, 0.18);
+  border-color: rgba(22, 163, 74, 0.45);
+  color: #bbf7d0;
+}
+
+.imageEditorPillWarning {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #fecdd3;
+}
+
 .imageEditorStage {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 16 / 9;
   background: radial-gradient(circle at 40% 30%, rgba(59, 130, 246, 0.08), transparent 42%), #0b0b14;
   border: 1px solid rgba(148, 163, 184, 0.32);
   border-radius: 18px;
@@ -8717,6 +8757,30 @@
   border-radius: 18px;
   box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.14);
   pointer-events: none;
+}
+
+.imageEditorBottomRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.imageEditorStock {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #0b1020;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.imageEditorPrice {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: linear-gradient(120deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.14));
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #e0f2fe;
+  font-weight: 900;
 }
 
 .imageEditorControls {

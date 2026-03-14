@@ -4003,24 +4003,25 @@ export default function UserDashboardPage() {
       img.onerror = reject
     })
 
-    const size = 640
+    const width = 960
+    const height = 540
     const canvas = document.createElement('canvas')
-    canvas.width = size
-    canvas.height = size
+    canvas.width = width
+    canvas.height = height
     const ctx = canvas.getContext('2d')
     if (!ctx) return null
 
     const scale = imageEditorScale
-    const offsetX = imageEditorOffsetX * size * 0.5
-    const offsetY = imageEditorOffsetY * size * 0.5
+    const offsetX = imageEditorOffsetX * width * 0.5
+    const offsetY = imageEditorOffsetY * height * 0.5
 
     const drawW = img.width * scale
     const drawH = img.height * scale
-    const dx = size / 2 - drawW / 2 + offsetX
-    const dy = size / 2 - drawH / 2 + offsetY
+    const dx = width / 2 - drawW / 2 + offsetX
+    const dy = height / 2 - drawH / 2 + offsetY
 
     ctx.fillStyle = '#0b0b14'
-    ctx.fillRect(0, 0, size, size)
+    ctx.fillRect(0, 0, width, height)
     ctx.drawImage(img, dx, dy, drawW, drawH)
 
     const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(b => resolve(b), 'image/png', 0.95))
@@ -4075,13 +4076,13 @@ export default function UserDashboardPage() {
     }
   }
 
-  function handleEditorWheel(event: React.WheelEvent<HTMLDivElement>) {
+  function handleEditorWheel(event: any) {
     event.preventDefault()
     const delta = event.deltaY > 0 ? -0.08 : 0.08
     setImageEditorScale(prev => clamp(prev + delta, 0.8, 3.5))
   }
 
-  function handleEditorPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+  function handleEditorPointerDown(event: any) {
     event.preventDefault()
     const map = imageEditorPointersRef.current
     map.set(event.pointerId, { x: event.clientX, y: event.clientY })
@@ -4090,7 +4091,7 @@ export default function UserDashboardPage() {
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
-  function handleEditorPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+  function handleEditorPointerMove(event: any) {
     const stage = imageEditorStageRef.current
     if (!stage) return
     const map = imageEditorPointersRef.current
@@ -4116,7 +4117,7 @@ export default function UserDashboardPage() {
     }
   }
 
-  function handleEditorPointerUp(event: React.PointerEvent<HTMLDivElement>) {
+  function handleEditorPointerUp(event: any) {
     const map = imageEditorPointersRef.current
     map.delete(event.pointerId)
     if (map.size === 0) {
@@ -13034,29 +13035,50 @@ export default function UserDashboardPage() {
 
             <div className={styles.imageEditorLayout}>
               <div className={styles.imageEditorPreview}>
-                <div
-                  className={styles.imageEditorStage}
-                  ref={imageEditorStageRef}
-                  onPointerDown={handleEditorPointerDown}
-                  onPointerMove={handleEditorPointerMove}
-                  onPointerUp={handleEditorPointerUp}
-                  onPointerCancel={handleEditorPointerUp}
-                  onWheel={handleEditorWheel}
-                >
-                  {imageEditorSrc && (
-                    <>
-                      <div className={styles.imageEditorBadge}>Así se verá</div>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={imageEditorSrc}
-                        alt='Previsualizacion'
-                        style={{
-                          transform: `translate(${imageEditorOffsetX * 50}%, ${imageEditorOffsetY * 50}%) scale(${imageEditorScale})`,
-                        }}
-                      />
-                      <div className={styles.imageEditorFrame} aria-hidden />
-                    </>
-                  )}
+                <div className={styles.imageEditorCardPreview}>
+                  <div className={styles.imageEditorBadgeRow}>
+                    {providerProductForm.termsAndConditions.trim() && (
+                      <span className={styles.imageEditorPill}>Términos</span>
+                    )}
+                    <span
+                      className={`${styles.imageEditorPill} ${
+                        providerProductForm.renewable ? styles.imageEditorPillSuccess : styles.imageEditorPillWarning
+                      }`}
+                    >
+                      {providerProductForm.renewable ? 'Renovable' : 'No renovable'}
+                    </span>
+                  </div>
+
+                  <div
+                    className={styles.imageEditorStage}
+                    ref={imageEditorStageRef}
+                    onPointerDown={handleEditorPointerDown}
+                    onPointerMove={handleEditorPointerMove}
+                    onPointerUp={handleEditorPointerUp}
+                    onPointerCancel={handleEditorPointerUp}
+                    onWheel={handleEditorWheel}
+                  >
+                    {imageEditorSrc && (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imageEditorSrc}
+                          alt='Previsualizacion'
+                          style={{
+                            transform: `translate(${imageEditorOffsetX * 50}%, ${imageEditorOffsetY * 50}%) scale(${imageEditorScale})`,
+                          }}
+                        />
+                        <div className={styles.imageEditorFrame} aria-hidden />
+                      </>
+                    )}
+                  </div>
+
+                  <div className={styles.imageEditorBottomRow}>
+                    <span className={styles.imageEditorStock}>
+                      {(providerInventoryAccounts?.length || 2) + ' con stock'}
+                    </span>
+                    <span className={styles.imageEditorPrice}>S/ {providerProductForm.priceGuest || '0.00'}</span>
+                  </div>
                 </div>
               </div>
 
