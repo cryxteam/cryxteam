@@ -325,18 +325,6 @@ const categories: Category[] = [
                         {cat.label}
                       </button>
                     ))}
-                    <input
-                      list='categoria-sugerencias'
-                      className={styles.chipFreeInput}
-                      placeholder='Escribe tu categoría'
-                      value={selectedCategory}
-                      onChange={e => setSelectedCategory(e.target.value)}
-                    />
-                    <datalist id='categoria-sugerencias'>
-                      {categories.map(cat => (
-                        <option key={`opt-${cat.id}`} value={cat.label} />
-                      ))}
-                    </datalist>
                   </div>
                 </div>
 
@@ -412,11 +400,11 @@ const categories: Category[] = [
                 <div className={styles.pricingRow}>
                   <div>
                     <p className={styles.mutedLabel}>Cargo</p>
-                    <div className={styles.readonlyField}>$ {(unitPrice / 1000 * quantity).toFixed(6)}</div>
+                    <div className={styles.readonlyField}>S/ {(unitPrice / 1000 * quantity).toFixed(6)}</div>
                   </div>
                   <div>
                     <p className={styles.mutedLabel}>Total estimado</p>
-                    <div className={styles.readonlyField}>$ {total.toFixed(6)}</div>
+                    <div className={styles.readonlyField}>S/ {total.toFixed(6)}</div>
                   </div>
                 </div>
 
@@ -516,13 +504,15 @@ const categories: Category[] = [
             </div>
             <p className={styles.sectionLead}>Recarga con el mismo estilo que el panel principal.</p>
             <div className={styles.rechargeGrid}>
-              {metrics.map(item => (
-                <article key={item.id} className={styles.metricCard}>
-                  <p className={styles.metricLabel}>{item.label}</p>
-                  <p className={styles.metricValue}>{item.value}</p>
-                  <p className={styles.metricHint}>{item.hint}</p>
-                </article>
-              ))}
+              {metrics
+                .filter(item => item.id !== 'balance')
+                .map(item => (
+                  <article key={item.id} className={styles.metricCard}>
+                    <p className={styles.metricLabel}>{item.label}</p>
+                    <p className={styles.metricValue}>{item.value}</p>
+                    <p className={styles.metricHint}>{item.hint}</p>
+                  </article>
+                ))}
             </div>
             <Link href='/dashboard?section=recargar' className={styles.primaryBtn}>
               Ver metodos de pago

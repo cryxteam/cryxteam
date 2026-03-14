@@ -1762,15 +1762,16 @@ const [providerProductForm, setProviderProductForm] = useState<ProviderFormState
 const [followersForm, setFollowersForm] = useState({
   categoria: '',
   plataforma: '',
+  servicio: '',
   descripcion: '',
   detalles: '',
   notas: '',
   precioPorMil: '',
   tiempoPromedio: '',
 })
-  const [followerPackages, setFollowerPackages] = useState<
-    {
-      id: string
+const [followerPackages, setFollowerPackages] = useState<
+  {
+    id: string
       categoria: string
       plataforma: string
     descripcion: string | null
@@ -1781,6 +1782,8 @@ const [followersForm, setFollowersForm] = useState({
   }[]
 >([])
 const [isSavingFollower, setIsSavingFollower] = useState(false)
+const [showFollowersModal, setShowFollowersModal] = useState(false)
+const [followersEditingProduct, setFollowersEditingProduct] = useState<ProviderProduct | null>(null)
   const [providerOrderDrafts, setProviderOrderDrafts] = useState<Record<string, ProviderOrderDraft>>({})
   const [providerOrderSaving, setProviderOrderSaving] = useState<Record<string, boolean>>({})
   const [providerTicketDrafts, setProviderTicketDrafts] = useState<Record<string, ProviderTicketDraft>>({})
@@ -9380,121 +9383,153 @@ const [isSavingFollower, setIsSavingFollower] = useState(false)
                 </p>
               )}
 
+              {showFollowersModal && (
+                <div className={styles.providerFollowersModalBackdrop} role='presentation'>
+                  <section
+                    className={styles.providerFollowersModalCard}
+                    role='dialog'
+                    aria-modal='true'
+                    aria-labelledby='provider-followers-title'
+                  >
+                    <div className={styles.providerModalHead}>
+                      <div>
+                        <p className={styles.sectionEyebrow}>Seguidores</p>
+                        <h4 id='provider-followers-title'>Configurar servicio</h4>
+                        <p className={styles.sectionLead}>
+                          Producto: <strong>{followersEditingProduct?.name || 'Sin producto'}</strong>
+                        </p>
+                      </div>
+                      <button type='button' onClick={() => setShowFollowersModal(false)}>
+                        Cerrar
+                      </button>
+                    </div>
+
+                    <div className={styles.providerFollowersGrid}>
+                      <label className={styles.inputBlock}>
+                        <span>Servicio</span>
+                        <input
+                          type='text'
+                          value={followersForm.servicio}
+                          onChange={e => setFollowersForm(form => ({ ...form, servicio: e.target.value }))}
+                          placeholder='Likes, Vistas, Seguidores...'
+                        />
+                      </label>
+                      <label className={styles.inputBlock}>
+                        <span>Categoria</span>
+                        <input
+                          type='text'
+                          value={followersForm.categoria}
+                          onChange={e => setFollowersForm(form => ({ ...form, categoria: e.target.value }))}
+                          placeholder='Categoria libre'
+                        />
+                      </label>
+                      <label className={styles.inputBlock}>
+                        <span>Plataforma</span>
+                        <input
+                          type='text'
+                          value={followersForm.plataforma}
+                          onChange={e => setFollowersForm(form => ({ ...form, plataforma: e.target.value }))}
+                          placeholder='Instagram, TikTok, YouTube...'
+                        />
+                      </label>
+                      <label className={styles.inputBlock}>
+                        <span>Precio x 1000</span>
+                        <input
+                          type='number'
+                          min='0'
+                          step='0.001'
+                          value={followersForm.precioPorMil}
+                          onChange={e => setFollowersForm(form => ({ ...form, precioPorMil: e.target.value }))}
+                          placeholder='0.055'
+                        />
+                      </label>
+                      <label className={styles.inputBlock}>
+                        <span>Tiempo promedio</span>
+                        <input
+                          type='text'
+                          value={followersForm.tiempoPromedio}
+                          onChange={e => setFollowersForm(form => ({ ...form, tiempoPromedio: e.target.value }))}
+                          placeholder='Inicio 0-20 min, entrega 10K/dia'
+                        />
+                      </label>
+                    </div>
+
+                    <div className={styles.providerFollowersRow}>
+                      <label className={styles.inputBlock}>
+                        <span>Descripcion</span>
+                        <textarea
+                          rows={2}
+                          value={followersForm.descripcion}
+                          onChange={e => setFollowersForm(form => ({ ...form, descripcion: e.target.value }))}
+                          placeholder='Drop bajo, perfiles HQ, retencion alta...'
+                        />
+                      </label>
+                      <label className={styles.inputBlock}>
+                        <span>Detalles</span>
+                        <textarea
+                          rows={2}
+                          value={followersForm.detalles}
+                          onChange={e => setFollowersForm(form => ({ ...form, detalles: e.target.value }))}
+                          placeholder='Formato de enlace, ubicacion, velocidad...'
+                        />
+                      </label>
+                      <label className={styles.inputBlock}>
+                        <span>Notas</span>
+                        <textarea
+                          rows={2}
+                          value={followersForm.notas}
+                          onChange={e => setFollowersForm(form => ({ ...form, notas: e.target.value }))}
+                          placeholder='No repetir enlace hasta terminar, soporte 24/7, etc.'
+                        />
+                      </label>
+                    </div>
+
+                    <div className={styles.providerFollowersActions}>
+                      <button
+                        type='button'
+                        className={styles.primaryBtn}
+                        disabled={isSavingFollower}
+                        onClick={async () => {
+                          if (!providerId) return
+                          setIsSavingFollower(true)
+                          await supabase.from('follower_packages').insert({
+                            provider_id: providerId,
+                            categoria: followersForm.categoria.trim() || 'Seguidores',
+                            plataforma: followersForm.plataforma.trim() || 'Instagram',
+                            titulo: `${followersEditingProduct?.name || 'Producto'} - ${followersForm.servicio.trim() || 'Servicio'}`,
+                            descripcion: followersForm.descripcion.trim() || null,
+                            detalles: followersForm.detalles.trim() || null,
+                            notas: followersForm.notas.trim() || null,
+                            precio_por_mil: Number(followersForm.precioPorMil || 0),
+                            tiempo_promedio: followersForm.tiempoPromedio.trim() || null,
+                          })
+                          const { data: pkgRows } = await supabase
+                            .from('follower_packages')
+                            .select('id,categoria,plataforma,descripcion,detalles,notas,precio_por_mil,tiempo_promedio')
+                            .eq('provider_id', providerId)
+                            .order('created_at', { ascending: false })
+                          if (pkgRows) setFollowerPackages(pkgRows)
+                          setIsSavingFollower(false)
+                          setShowFollowersModal(false)
+                        }}
+                      >
+                        {isSavingFollower ? 'Guardando...' : 'Guardar servicio'}
+                      </button>
+                    </div>
+                  </section>
+                </div>
+              )}
+
               {isVyron && (
                 <section className={styles.providerFollowersCard}>
                   <div className={styles.providerFollowersHead}>
                     <div>
                       <p className={styles.sectionEyebrow}>Seguidores</p>
-                      <h3 className={styles.sectionTitle}>Configura paquetes</h3>
-                      <p className={styles.sectionLead}>Solo visible para Vyron. Ajusta categorías, precios y mensajes.</p>
+                      <h3 className={styles.sectionTitle}>Administra servicios</h3>
+                      <p className={styles.sectionLead}>
+                        Crea tu producto y luego haz click en "Seguidores" dentro del producto para completar los datos.
+                      </p>
                     </div>
-                  </div>
-
-                  <div className={styles.providerFollowersGrid}>
-                    <label className={styles.inputBlock}>
-                      <span>Categoría</span>
-                      <input
-                        type='text'
-                        value={followersForm.categoria}
-                        onChange={e => setFollowersForm(form => ({ ...form, categoria: e.target.value }))}
-                        placeholder='Likes, Seguidores, Vistas...'
-                      />
-                    </label>
-
-                    <label className={styles.inputBlock}>
-                      <span>Plataforma</span>
-                      <input
-                        type='text'
-                        value={followersForm.plataforma}
-                        onChange={e => setFollowersForm(form => ({ ...form, plataforma: e.target.value }))}
-                        placeholder='Instagram, TikTok, YouTube...'
-                      />
-                    </label>
-
-                    <label className={styles.inputBlock}>
-                      <span>Precio x 1000</span>
-                      <input
-                        type='number'
-                        min='0'
-                        step='0.001'
-                        value={followersForm.precioPorMil}
-                        onChange={e => setFollowersForm(form => ({ ...form, precioPorMil: e.target.value }))}
-                        placeholder='0.055'
-                      />
-                    </label>
-
-                    <label className={styles.inputBlock}>
-                      <span>Tiempo promedio</span>
-                      <input
-                        type='text'
-                        value={followersForm.tiempoPromedio}
-                        onChange={e => setFollowersForm(form => ({ ...form, tiempoPromedio: e.target.value }))}
-                        placeholder='Inicio 0-20 min, entrega 10K/día'
-                      />
-                    </label>
-                  </div>
-
-                  <div className={styles.providerFollowersRow}>
-                    <label className={styles.inputBlock}>
-                      <span>Descripción</span>
-                      <textarea
-                        rows={2}
-                        value={followersForm.descripcion}
-                        onChange={e => setFollowersForm(form => ({ ...form, descripcion: e.target.value }))}
-                        placeholder='Drop bajo, perfiles HQ, retención alta...'
-                      />
-                    </label>
-                    <label className={styles.inputBlock}>
-                      <span>Detalles</span>
-                      <textarea
-                        rows={2}
-                        value={followersForm.detalles}
-                        onChange={e => setFollowersForm(form => ({ ...form, detalles: e.target.value }))}
-                        placeholder='Formato de enlace, ubicación, velocidad...'
-                      />
-                    </label>
-                    <label className={styles.inputBlock}>
-                      <span>Notas</span>
-                      <textarea
-                        rows={2}
-                        value={followersForm.notas}
-                        onChange={e => setFollowersForm(form => ({ ...form, notas: e.target.value }))}
-                        placeholder='No repetir enlace hasta terminar, soporte 24/7, etc.'
-                      />
-                    </label>
-                  </div>
-
-                  <div className={styles.providerFollowersActions}>
-                    <button
-                      type='button'
-                      className={styles.primaryBtn}
-                      disabled={isSavingFollower}
-                      onClick={async () => {
-                        if (!providerId) return
-                        setIsSavingFollower(true)
-                        await supabase.from('follower_packages').insert({
-                          provider_id: providerId,
-                          categoria: followersForm.categoria.trim() || 'Seguidores',
-                          plataforma: followersForm.plataforma.trim() || 'Instagram',
-                          descripcion: followersForm.descripcion.trim() || null,
-                          detalles: followersForm.detalles.trim() || null,
-                          notas: followersForm.notas.trim() || null,
-                          precio_por_mil: Number(followersForm.precioPorMil || 0),
-                          tiempo_promedio: followersForm.tiempoPromedio.trim() || null,
-                        })
-                        const { data: pkgRows } = await supabase
-                          .from('follower_packages')
-                          .select(
-                            'id,categoria,plataforma,descripcion,detalles,notas,precio_por_mil,tiempo_promedio'
-                          )
-                          .eq('provider_id', providerId)
-                          .order('created_at', { ascending: false })
-                        if (pkgRows) setFollowerPackages(pkgRows)
-                        setIsSavingFollower(false)
-                      }}
-                    >
-                      {isSavingFollower ? 'Guardando...' : 'Guardar paquete'}
-                    </button>
                   </div>
                 </section>
               )}
@@ -9984,6 +10019,28 @@ const [isSavingFollower, setIsSavingFollower] = useState(false)
                                   </div>
 
                                   <div className={styles.providerProductQuickActions}>
+                                    {isVyron && (
+                                      <button
+                                        type='button'
+                                        className={styles.providerToggleUnderButton}
+                                        onClick={() => {
+                                          setFollowersEditingProduct(product)
+                                          setFollowersForm({
+                                            categoria: '',
+                                            plataforma: '',
+                                            servicio: '',
+                                            descripcion: '',
+                                            detalles: '',
+                                            notas: '',
+                                            precioPorMil: '',
+                                            tiempoPromedio: '',
+                                          })
+                                          setShowFollowersModal(true)
+                                        }}
+                                      >
+                                        Seguidores
+                                      </button>
+                                    )}
                                     <button
                                       type='button'
                                       className={styles.providerEditIconButton}

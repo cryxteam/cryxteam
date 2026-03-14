@@ -634,6 +634,14 @@
   background: #0c111c;
 }
 
+.formPanel input[type='text'],
+.formPanel input[type='number'],
+.formPanel select {
+  min-height: 46px;
+  padding: 12px 14px;
+  font-size: 1rem;
+}
+
 .searchInput {
   height: 44px;
   font-size: 1rem;

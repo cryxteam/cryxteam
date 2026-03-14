@@ -1670,13 +1670,28 @@
   margin-top: 10px;
 }
 
-.chipFreeInput {
-  min-width: 180px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.32);
-  background: #0c121d;
-  color: #e8ecff;
+.providerFollowersModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(2, 6, 23, 0.7);
+  backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  animation: providerModalFadeIn 0.24s ease both;
+}
+
+.providerFollowersModalCard {
+  width: min(860px, calc(100vw - 32px));
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: linear-gradient(150deg, rgba(12, 16, 30, 0.98), rgba(8, 10, 22, 0.98));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  padding: 16px 18px;
+  animation: providerModalSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .providerCreateBlock {
