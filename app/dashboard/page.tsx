@@ -568,34 +568,9 @@ const RECHARGE_METHODS = [
 
 const AFFILIATE_LINK_QUERIES = [
   {
-    table: 'user_affiliations',
-    filterColumn: 'referrer_user_id',
-    referredColumns: ['referred_user_id', 'affiliate_user_id', 'referred_id'],
-  },
-  {
-    table: 'user_affiliations',
-    filterColumn: 'referrer_id',
-    referredColumns: ['referred_user_id', 'affiliate_user_id', 'referred_id'],
-  },
-  {
-    table: 'affiliations',
-    filterColumn: 'referrer_user_id',
-    referredColumns: ['referred_user_id', 'referred_id', 'affiliate_user_id', 'user_id'],
-  },
-  {
-    table: 'affiliations',
-    filterColumn: 'referrer_id',
-    referredColumns: ['referred_user_id', 'referred_id', 'affiliate_user_id', 'user_id'],
-  },
-  {
-    table: 'referrals',
-    filterColumn: 'referrer_user_id',
-    referredColumns: ['referred_user_id', 'referred_id', 'user_id'],
-  },
-  {
-    table: 'referrals',
-    filterColumn: 'referrer_id',
-    referredColumns: ['referred_user_id', 'referred_id', 'user_id'],
+    table: 'profiles',
+    filterColumn: 'afiliador',
+    referredColumns: ['id'],
   },
 ] as const
 
