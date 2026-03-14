@@ -505,6 +505,7 @@ const PRODUCT_IMAGE_BUCKET = 'product-images'
 const PROVIDER_AVATAR_BUCKET = 'provider-avatars'
 const PRODUCT_IMAGE_MAX_BYTES = 2 * 1024 * 1024
 const PRODUCT_FILTER_LOGO_MIN_SIZE = 420
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v))
 const PRODUCT_IMAGE_ALLOWED_TYPES = new Set([
   'image/png',
   'image/jpeg',
@@ -1763,6 +1764,10 @@ export default function UserDashboardPage() {
   const providerNotifyLastCountRef = useRef(0)
   const providerImageInputRef = useRef<HTMLInputElement | null>(null)
   const providerAvatarInputRef = useRef<HTMLInputElement | null>(null)
+  const imageEditorStageRef = useRef<HTMLDivElement | null>(null)
+  const imageEditorPointersRef = useRef<Map<number, { x: number; y: number }>>(new Map())
+  const imageEditorLastPanRef = useRef<{ x: number; y: number } | null>(null)
+  const imageEditorPinchDistRef = useRef<number | null>(null)
   const [imageEditorOpen, setImageEditorOpen] = useState(false)
   const [imageEditorSrc, setImageEditorSrc] = useState<string | null>(null)
   const [imageEditorFile, setImageEditorFile] = useState<File | null>(null)
@@ -3879,6 +3884,9 @@ export default function UserDashboardPage() {
     setImageEditorScale(1.1)
     setImageEditorOffsetX(0)
     setImageEditorOffsetY(0)
+    imageEditorPointersRef.current.clear()
+    imageEditorLastPanRef.current = null
+    imageEditorPinchDistRef.current = null
     setImageEditorOpen(true)
     event.target.value = ''
   }
@@ -4025,6 +4033,9 @@ export default function UserDashboardPage() {
     if (imageEditorSrc) URL.revokeObjectURL(imageEditorSrc)
     setImageEditorSrc(null)
     setImageEditorFile(null)
+    imageEditorPointersRef.current.clear()
+    imageEditorLastPanRef.current = null
+    imageEditorPinchDistRef.current = null
     setImageEditorOpen(false)
   }
 
@@ -4061,6 +4072,86 @@ export default function UserDashboardPage() {
     } finally {
       setIsProviderImageUploading(false)
       closeImageEditor()
+    }
+  }
+
+  function handleEditorWheel(event: React.WheelEvent<HTMLDivElement>) {
+    event.preventDefault()
+    const delta = event.deltaY > 0 ? -0.08 : 0.08
+    setImageEditorScale(prev => clamp(prev + delta, 0.8, 3.5))
+  }
+
+  function handleEditorPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    event.preventDefault()
+    const map = imageEditorPointersRef.current
+    map.set(event.pointerId, { x: event.clientX, y: event.clientY })
+    imageEditorLastPanRef.current = { x: event.clientX, y: event.clientY }
+    imageEditorPinchDistRef.current = null
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  function handleEditorPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const stage = imageEditorStageRef.current
+    if (!stage) return
+    const map = imageEditorPointersRef.current
+    if (!map.has(event.pointerId)) return
+    const rect = stage.getBoundingClientRect()
+
+    const prevPoint = map.get(event.pointerId)!
+    map.set(event.pointerId, { x: event.clientX, y: event.clientY })
+
+    if (map.size === 1 && imageEditorLastPanRef.current) {
+      const dx = (event.clientX - imageEditorLastPanRef.current.x) / rect.width
+      const dy = (event.clientY - imageEditorLastPanRef.current.y) / rect.height
+      setImageEditorOffsetX(prev => clamp(prev + dx, -1.2, 1.2))
+      setImageEditorOffsetY(prev => clamp(prev + dy, -1.2, 1.2))
+      imageEditorLastPanRef.current = { x: event.clientX, y: event.clientY }
+    } else if (map.size >= 2) {
+      const pts = Array.from(map.values())
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)
+      const lastDist = imageEditorPinchDistRef.current ?? dist
+      const factor = dist / lastDist
+      setImageEditorScale(prev => clamp(prev * factor, 0.8, 3.5))
+      imageEditorPinchDistRef.current = dist
+    }
+  }
+
+  function handleEditorPointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    const map = imageEditorPointersRef.current
+    map.delete(event.pointerId)
+    if (map.size === 0) {
+      imageEditorLastPanRef.current = null
+      imageEditorPinchDistRef.current = null
+    } else if (map.size === 1) {
+      const [only] = map.values()
+      imageEditorLastPanRef.current = { x: only.x, y: only.y }
+      imageEditorPinchDistRef.current = null
+    }
+  }
+
+  async function handleEditExistingLogo(url: string) {
+    if (!url) return
+    try {
+      setProviderMsgType('idle')
+      setProviderMsg('Cargando imagen para editar...')
+      const response = await fetch(url, { mode: 'cors' })
+      const blob = await response.blob()
+      const extFromType = blob.type.split('/')[1] || 'png'
+      const safeName = sanitizeFilePart(providerProductForm.name || 'producto')
+      const file = new File([blob], `${safeName}-edit.${extFromType}`, { type: blob.type || 'image/png' })
+      if (imageEditorSrc) URL.revokeObjectURL(imageEditorSrc)
+      setImageEditorFile(file)
+      setImageEditorSrc(URL.createObjectURL(blob))
+      setImageEditorScale(1.1)
+      setImageEditorOffsetX(0)
+      setImageEditorOffsetY(0)
+      imageEditorPointersRef.current.clear()
+      imageEditorLastPanRef.current = null
+      imageEditorPinchDistRef.current = null
+      setImageEditorOpen(true)
+    } catch (error) {
+      setProviderMsgType('error')
+      setProviderMsg('No se pudo cargar la imagen para editar.')
     }
   }
 
@@ -9032,32 +9123,42 @@ export default function UserDashboardPage() {
                       />
                     </label>
 
-                    <label className={styles.providerField}>
-                      <span>Imagen del producto</span>
-                      <div className={styles.providerImageActions}>
-                        <button
-                          type='button'
-                          className={styles.providerGhostButton}
-                          disabled={isProviderImageUploading}
-                          onClick={() => providerImageInputRef.current?.click()}
-                        >
-                          {isProviderImageUploading ? 'Subiendo...' : 'Subir desde archivos'}
-                        </button>
-                        {providerProductForm.logo.trim() && (
-                          <button
-                            type='button'
-                            className={styles.providerGhostButton}
-                            disabled={isProviderImageUploading}
-                            onClick={() => setProviderProductForm(previous => ({ ...previous, logo: '' }))}
-                          >
-                            Quitar imagen
-                          </button>
-                        )}
-                      </div>
-                      <input
-                        ref={providerImageInputRef}
-                        className={styles.providerHiddenInput}
-                        type='file'
+            <label className={styles.providerField}>
+              <span>Imagen del producto</span>
+              <div className={styles.providerImageActions}>
+                <button
+                  type='button'
+                  className={styles.providerGhostButton}
+                  disabled={isProviderImageUploading}
+                  onClick={() => providerImageInputRef.current?.click()}
+                >
+                  {isProviderImageUploading ? 'Subiendo...' : 'Subir desde archivos'}
+                </button>
+                {providerProductForm.logo.trim() && (
+                  <button
+                    type='button'
+                    className={styles.providerGhostButton}
+                    disabled={isProviderImageUploading}
+                    onClick={() => setProviderProductForm(previous => ({ ...previous, logo: '' }))}
+                  >
+                    Quitar imagen
+                  </button>
+                )}
+                {providerProductForm.logo.trim() && (
+                  <button
+                    type='button'
+                    className={styles.providerGhostButton}
+                    disabled={isProviderImageUploading}
+                    onClick={() => void handleEditExistingLogo(providerProductForm.logo)}
+                  >
+                    Editar imagen
+                  </button>
+                )}
+              </div>
+              <input
+                ref={providerImageInputRef}
+                className={styles.providerHiddenInput}
+                type='file'
                         accept='image/png,image/jpeg,image/webp,image/avif'
                         onChange={handleProviderLogoFileChange}
                       />
@@ -12933,7 +13034,15 @@ export default function UserDashboardPage() {
 
             <div className={styles.imageEditorLayout}>
               <div className={styles.imageEditorPreview}>
-                <div className={styles.imageEditorStage}>
+                <div
+                  className={styles.imageEditorStage}
+                  ref={imageEditorStageRef}
+                  onPointerDown={handleEditorPointerDown}
+                  onPointerMove={handleEditorPointerMove}
+                  onPointerUp={handleEditorPointerUp}
+                  onPointerCancel={handleEditorPointerUp}
+                  onWheel={handleEditorWheel}
+                >
                   {imageEditorSrc && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
