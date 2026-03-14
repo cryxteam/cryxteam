@@ -196,7 +196,7 @@ export async function affiliateUserByUsernameAction(params: {
   // Fallback: actualizar afiliador/is_distributor aunque no exista referred_by o si fallo lo anterior.
   const { error: fallbackError } = await params.supabase
     .from('profiles')
-    .update({ afiliador: params.referrerUserId, is_distributor: true })
+    .update({ afiliador: params.referrerUserId, is_distributor: true, is_approved: true })
     .eq('id', targetId)
     .is('afiliador', null)
     .select('id')

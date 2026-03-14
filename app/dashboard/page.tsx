@@ -2763,7 +2763,7 @@ export default function UserDashboardPage() {
       const { data: profileLinkedRows, error: profileLinkedError } = await supabase
         .from('profiles')
         .select('id, username, is_approved, created_at')
-        .eq('referred_by', currentUserId)
+        .eq('afiliador', currentUserId)
         .order('created_at', { ascending: false })
         .limit(250)
 
