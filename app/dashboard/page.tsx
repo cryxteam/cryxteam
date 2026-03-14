@@ -3141,6 +3141,12 @@ export default function UserDashboardPage() {
     affiliatePrizeAppliedRef.current = false
   }
 
+  const claimAffiliatePrize = () => {
+    if (!affiliatePrize) return
+    if (!affiliatePrizeRevealed) setAffiliatePrizeRevealed(true)
+    void applyAffiliatePrize(affiliatePrize)
+  }
+
   function toggleCredentials(orderId: string) {
     setVisibleCredentials(previous => ({ ...previous, [orderId]: !previous[orderId] }))
   }
@@ -8645,7 +8651,6 @@ export default function UserDashboardPage() {
       const percent = cleared / (width * height) * 100
       if (percent > 60) {
         setAffiliatePrizeRevealed(true)
-        void applyAffiliatePrize(affiliatePrize || '')
       }
     }
 
@@ -13388,6 +13393,9 @@ export default function UserDashboardPage() {
               📱 WhatsApp: “Hola vengo a reclamar mi premio 😁”
             </p>
             <div className={styles.scratchActions}>
+              <button type='button' className={styles.scratchOk} onClick={claimAffiliatePrize}>
+                Reclamar premio
+              </button>
               <a
                 href={`https://wa.me/?text=${encodeURIComponent('Hola vengo a reclamar mi premio 😁')}`}
                 className={styles.scratchWhats}
@@ -13398,7 +13406,7 @@ export default function UserDashboardPage() {
                 WhatsApp
               </a>
               <button type='button' className={styles.scratchOk} onClick={closeAffiliatePrize}>
-                Listo
+                Cerrar
               </button>
             </div>
           </div>
