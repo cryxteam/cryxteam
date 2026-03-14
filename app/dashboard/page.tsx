@@ -9356,14 +9356,14 @@ const [followersForm, setFollowersForm] = useState({
                   <div className={styles.providerFollowersHead}>
                     <div>
                       <p className={styles.sectionEyebrow}>Seguidores</p>
-                      <h3 className={styles.sectionTitle}>Configura paquetes de followers</h3>
-                      <p className={styles.sectionLead}>Solo visible para Vyron. Ajusta categorias, precios y mensajes.</p>
+                      <h3 className={styles.sectionTitle}>Configura paquetes</h3>
+                      <p className={styles.sectionLead}>Solo visible para Vyron. Ajusta categorías, precios y mensajes.</p>
                     </div>
                   </div>
 
                   <div className={styles.providerFollowersGrid}>
                     <label className={styles.inputBlock}>
-                      <span>Categoria</span>
+                      <span>Categoría</span>
                       <select
                         value={followersForm.categoria}
                         onChange={e => setFollowersForm(form => ({ ...form, categoria: e.target.value }))}
@@ -9406,42 +9406,42 @@ const [followersForm, setFollowersForm] = useState({
                         type='text'
                         value={followersForm.tiempoPromedio}
                         onChange={e => setFollowersForm(form => ({ ...form, tiempoPromedio: e.target.value }))}
-                        placeholder='Inicio 0-20 min, entrega 10K/dia'
+                        placeholder='Inicio 0-20 min, entrega 10K/día'
                       />
                     </label>
                   </div>
 
-                  <label className={styles.inputBlock}>
-                    <span>Descripcion</span>
-                    <textarea
-                      rows={2}
-                      value={followersForm.descripcion}
-                      onChange={e => setFollowersForm(form => ({ ...form, descripcion: e.target.value }))}
-                      placeholder='Drop bajo, perfiles HQ, retencion alta...'
-                    />
-                  </label>
+                  <div className={styles.providerFollowersRow}>
+                    <label className={styles.inputBlock}>
+                      <span>Descripción</span>
+                      <textarea
+                        rows={2}
+                        value={followersForm.descripcion}
+                        onChange={e => setFollowersForm(form => ({ ...form, descripcion: e.target.value }))}
+                        placeholder='Drop bajo, perfiles HQ, retención alta...'
+                      />
+                    </label>
+                    <label className={styles.inputBlock}>
+                      <span>Detalles</span>
+                      <textarea
+                        rows={2}
+                        value={followersForm.detalles}
+                        onChange={e => setFollowersForm(form => ({ ...form, detalles: e.target.value }))}
+                        placeholder='Formato de enlace, ubicación, velocidad...'
+                      />
+                    </label>
+                    <label className={styles.inputBlock}>
+                      <span>Notas</span>
+                      <textarea
+                        rows={2}
+                        value={followersForm.notas}
+                        onChange={e => setFollowersForm(form => ({ ...form, notas: e.target.value }))}
+                        placeholder='No repetir enlace hasta terminar, soporte 24/7, etc.'
+                      />
+                    </label>
+                  </div>
 
-                  <label className={styles.inputBlock}>
-                    <span>Detalles</span>
-                    <textarea
-                      rows={2}
-                      value={followersForm.detalles}
-                      onChange={e => setFollowersForm(form => ({ ...form, detalles: e.target.value }))}
-                      placeholder='Formato de enlace, ubicacion, velocidad...'
-                    />
-                  </label>
-
-                  <label className={styles.inputBlock}>
-                    <span>Notas</span>
-                    <textarea
-                      rows={2}
-                      value={followersForm.notas}
-                      onChange={e => setFollowersForm(form => ({ ...form, notas: e.target.value }))}
-                      placeholder='No repetir enlace hasta terminar, soporte 24/7, etc.'
-                    />
-                  </label>
-
-                  <p className={styles.helperText}>(Solo UI por ahora; conecta a Supabase cuando definamos la tabla).</p>
+                  <p className={styles.helperText}>Solo UI por ahora; conecta a Supabase cuando definamos la tabla.</p>
                 </section>
               )}
               {!isOwner && providerLimitUnknown && (

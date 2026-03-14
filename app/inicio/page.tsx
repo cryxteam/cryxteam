@@ -447,7 +447,7 @@ export default function InicioPage() {
             Productos
           </Link>
           <Link href='/prosegur' className={navClass(pathname === '/prosegur')}>
-            Prosegur
+            Seguidores
           </Link>
           <Link href={accountHref} className={navClass(pathname === '/dashboard', true)}>
             {accountLabel}
@@ -502,7 +502,7 @@ export default function InicioPage() {
             className={pathname === '/prosegur' ? styles.navActive : ''}
             onClick={() => setMenuOpen(false)}
           >
-            Prosegur
+            Seguidores
           </Link>
           <Link
             href={accountHref}

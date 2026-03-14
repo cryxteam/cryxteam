@@ -516,16 +516,9 @@ export default function ProsegurPage() {
                 </article>
               ))}
             </div>
-            <button
-              type='button'
-              className={styles.primaryBtn}
-              onClick={() => {
-                setActiveSection('saldo')
-                rechargeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
-            >
+            <Link href='/dashboard?section=recargar' className={styles.primaryBtn}>
               Ver metodos de pago
-            </button>
+            </Link>
           </section>
 
           <section className={`${styles.contentCard} ${activeSection !== 'terminos' ? styles.cardHidden : ''}`}>

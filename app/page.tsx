@@ -74,7 +74,7 @@ export default function Home() {
         <nav className={styles.navLinks}>
           <Link href="/inicio">Inicio</Link>
           <Link href="/productos">Productos</Link>
-          <Link href="/prosegur">Prosegur</Link>
+          <Link href="/prosegur">Seguidores</Link>
           <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
             Comunidad
           </a>
@@ -102,7 +102,7 @@ export default function Home() {
             Productos
           </Link>
           <Link href="/prosegur" onClick={() => setOpenMenu(false)}>
-            Prosegur
+            Seguidores
           </Link>
           <a
             href={WHATSAPP_LINK}
