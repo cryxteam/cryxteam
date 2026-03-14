@@ -1618,6 +1618,17 @@ export default function ProductsPage() {
                   ))}
                 </div>
               )}
+              <div className={styles.secureBannerInline} aria-label='Compra segura'>
+                <div className={styles.secureBannerText}>
+                  <strong>Compra segura</strong>
+                  <small>Soporte 24/7 por WhatsApp y reposición inmediata si algo falla.</small>
+                </div>
+                <div className={styles.secureBadgesInline}>
+                  <span>Cifrado HTTPS/TLS</span>
+                  <span>Verificación de proveedores</span>
+                  <span>Atención humana al instante</span>
+                </div>
+              </div>
             </article>
 
           <aside className={styles.recommendPanel}>

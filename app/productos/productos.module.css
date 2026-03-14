@@ -531,8 +531,127 @@
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
   align-items: start;
-  gap: 14px;
-  margin-bottom: 14px;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.secureBanner {
+  display: none;
+}
+
+.secureBannerMain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.secureBannerMain h3 {
+  margin: 0;
+  font-size: 1.36rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: linear-gradient(120deg, #e0f2fe, #a5b4fc 55%, #34d399 100%);
+  -webkit-background-clip: text;
+  color: transparent;
+  font-weight: 900;
+  font-family: 'Bebas Neue', 'Anton', 'Impact', 'Segoe UI Black', sans-serif;
+  text-shadow: 0 0 14px rgba(59, 130, 246, 0.36);
+}
+
+.secureBannerMain p {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 0.96rem;
+  letter-spacing: 0.01em;
+}
+
+.secureIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  background: none;
+  border: 0;
+  text-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+}
+
+.secureBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.secureBadges span {
+  padding: 0;
+  color: #e5edff;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  font-size: 0.9rem;
+  text-shadow: 0 0 12px rgba(148, 163, 184, 0.32);
+}
+
+.secureBadges span::after {
+  content: ' •';
+  opacity: 0.55;
+}
+
+.secureBadges span:last-child::after {
+  content: '';
+}
+
+.secureBannerInline {
+  margin: 28px 4px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  column-gap: 14px;
+  row-gap: 6px;
+}
+
+.secureBannerText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.secureBannerText strong {
+  font-family: 'Bebas Neue', 'Anton', 'Impact', 'Segoe UI Black', sans-serif;
+  font-size: 1.32rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(120deg, #e0f2fe, #a5b4fc 55%, #34d399 100%);
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 12px rgba(59, 130, 246, 0.32);
+}
+
+.secureBannerText small {
+  color: #e2e8f0;
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+}
+
+.secureBadgesInline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 2px;
+  color: #e5edff;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  font-size: 0.9rem;
+  text-shadow: 0 0 12px rgba(148, 163, 184, 0.32);
+}
+
+.secureBadgesInline span::after {
+  content: ' •';
+  opacity: 0.55;
+}
+
+.secureBadgesInline span:last-child::after {
+  content: '';
 }
 
 .trendingPanel,
@@ -552,6 +671,7 @@
 .commentsPanel {
   composes: trendingPanel;
   overflow: hidden;
+  padding-bottom: 6px;
 }
 
 .commentsPanel header {
@@ -588,23 +708,25 @@
   position: relative;
   overflow: hidden;
   display: grid;
-  gap: 6px;
+  column-gap: 25px;
+  row-gap:25px;
 }
 
 .commentsTrack {
   display: flex;
-  gap: 6px;
+  gap: 12px;
   width: max-content;
-  animation: commentsLoop 26s linear infinite;
+  animation: commentsLoop 30s linear infinite;
   padding: 0;
 }
 
 .commentCard {
-  min-width: 240px;
-  max-width: 320px;
+  margin: 0;
+  min-width: 250px;
+  max-width: 330px;
   border: 1px solid rgba(148, 163, 184, 0.26);
   border-radius: 14px;
-  padding: 12px;
+  padding: 14px 15px;
   background:
     radial-gradient(circle at 92% 12%, rgba(59, 130, 246, 0.14), transparent 36%),
     linear-gradient(150deg, #111622 0%, #0e121c 48%, #0a0d16 100%);
@@ -1956,6 +2078,10 @@
 
   .discoverLayout {
     grid-template-columns: 1fr;
+  }
+
+  .secureBanner {
+    display: none;
   }
 
   .commentsPanel {
