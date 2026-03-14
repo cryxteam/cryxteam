@@ -719,7 +719,24 @@ export default function ProductsPage() {
           const { data: rowsRaw, error } = await supabase
             .from('products')
             .select(
-              'id,name,summary,terms_and_conditions,logo,provider_id,price_guest,price_affiliate,renewal_price,account_type,renewable,duration_days,profiles_per_account,delivery_mode,is_active,created_at'
+              [
+                'id',
+                'name',
+                'terms_and_conditions',
+                'image_url',
+                'provider_id',
+                'price_guest',
+                'price_affiliate',
+                'price_logged',
+                'renewal_price',
+                'account_type',
+                'renewable',
+                'duration_days',
+                'profiles_per_account',
+                'delivery_mode',
+                'is_active',
+                'created_at',
+              ].join(',')
             )
             .order('created_at', { ascending: false })
             .limit(400)
@@ -732,7 +749,7 @@ export default function ProductsPage() {
             return
           }
 
-          const rows = (rowsRaw ?? []) as Record<string, unknown>[]
+          const rows = (rowsRaw ?? []) as unknown as Record<string, unknown>[]
 
           if (rows.length === 0) {
             setProducts([])
