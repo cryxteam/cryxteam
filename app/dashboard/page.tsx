@@ -1783,7 +1783,9 @@ const [followerPackages, setFollowerPackages] = useState<
 >([])
 const [isSavingFollower, setIsSavingFollower] = useState(false)
 const [showFollowersModal, setShowFollowersModal] = useState(false)
-const [followersEditingProduct, setFollowersEditingProduct] = useState<ProviderProduct | null>(null)
+const [showFollowersPanel, setShowFollowersPanel] = useState(false)
+const [followersNewPlatform, setFollowersNewPlatform] = useState('')
+const [followersPlatforms, setFollowersPlatforms] = useState<string[]>([])
   const [providerOrderDrafts, setProviderOrderDrafts] = useState<Record<string, ProviderOrderDraft>>({})
   const [providerOrderSaving, setProviderOrderSaving] = useState<Record<string, boolean>>({})
   const [providerTicketDrafts, setProviderTicketDrafts] = useState<Record<string, ProviderTicketDraft>>({})
@@ -3192,23 +3194,31 @@ const [followersEditingProduct, setFollowersEditingProduct] = useState<ProviderP
     const effect = prizeEffects[prize]
     if (!effect) return
 
+    const isCashbackPrize = Boolean(effect.cashbackRate && effect.cashbackDays)
+    if (!isCashbackPrize) {
+      try {
+        await supabase.from('prize_logs').insert({ user_id: targetUserId, prize }).select('id').single()
+        affiliatePrizeAppliedRef.current = true
+        setAffiliateMsg('Premio registrado. El owner lo entregara manualmente.')
+        setAffiliateMsgType('ok')
+        setShowAffiliatePrize(false)
+        setAffiliatePrizeRevealed(false)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'No se pudo registrar el premio'
+        setAffiliateMsg(message)
+        setAffiliateMsgType('error')
+      }
+      return
+    }
+
     try {
       const updates: Record<string, unknown> = {}
-
-      if (effect.credit) {
-        const nextBalance = Math.max(0, toNumber(profile?.balance, 0) + effect.credit)
-        updates.balance = nextBalance
-      }
 
       if (effect.cashbackRate && effect.cashbackDays) {
         const expires = new Date()
         expires.setDate(expires.getDate() + effect.cashbackDays)
         updates.cashback_rate = effect.cashbackRate
         updates.cashback_expires_at = expires.toISOString()
-      }
-
-      if (effect.freeProfile) {
-        await grantFreeProfileReward(targetUserId)
       }
 
       if (Object.keys(updates).length > 0) {
@@ -3238,23 +3248,8 @@ const [followersEditingProduct, setFollowersEditingProduct] = useState<ProviderP
       // Log del premio
       await supabase.from('prize_logs').insert({ user_id: targetUserId, prize }).select('id').single()
 
-      // Ticket extra: dispara un premio adicional
-      if (effect.extraTicket) {
-        affiliatePrizeAppliedRef.current = false
-        let nextPrize = pickAffiliatePrize()
-        for (let i = 0; i < 4 && nextPrize === 'Ticket extra de raspa y gana'; i += 1) {
-          nextPrize = pickAffiliatePrize()
-        }
-        setAffiliatePrize(nextPrize)
-        setAffiliatePrizeRevealed(false)
-        setShowAffiliatePrize(true)
-        setAffiliateMsg('Ticket extra generado. Raspa y reclama el nuevo premio.')
-        setAffiliateMsgType('ok')
-        return
-      }
-
       affiliatePrizeAppliedRef.current = true
-      setAffiliateMsg('🎉 Premio acreditado automáticamente')
+      setAffiliateMsg('Cashback acreditado automaticamente')
       setAffiliateMsgType('ok')
       setShowAffiliatePrize(false)
       setAffiliatePrizeRevealed(false)
@@ -4006,6 +4001,18 @@ const [followersEditingProduct, setFollowersEditingProduct] = useState<ProviderP
       active = false
     }
   }, [isProvider, providerId])
+
+  useEffect(() => {
+    if (!followerPackages.length) return
+    const platforms = Array.from(
+      new Set(
+        followerPackages
+          .map(pkg => (pkg.plataforma || '').trim())
+          .filter(Boolean)
+      )
+    )
+    setFollowersPlatforms(platforms)
+  }, [followerPackages])
   const canSeeProvider = isProvider || isOwner
   const canSeeAdminAccounts = isOwnerOrAdmin
   const providerDisplayName = normalizeDisplayName(profile?.username) || 'Proveedor'
@@ -9396,7 +9403,7 @@ const [followersEditingProduct, setFollowersEditingProduct] = useState<ProviderP
                         <p className={styles.sectionEyebrow}>Seguidores</p>
                         <h4 id='provider-followers-title'>Configurar servicio</h4>
                         <p className={styles.sectionLead}>
-                          Producto: <strong>{followersEditingProduct?.name || 'Sin producto'}</strong>
+                          Red social: <strong>{followersForm.plataforma || 'Sin red'}</strong>
                         </p>
                       </div>
                       <button type='button' onClick={() => setShowFollowersModal(false)}>
@@ -9496,7 +9503,7 @@ const [followersEditingProduct, setFollowersEditingProduct] = useState<ProviderP
                             provider_id: providerId,
                             categoria: followersForm.categoria.trim() || 'Seguidores',
                             plataforma: followersForm.plataforma.trim() || 'Instagram',
-                            titulo: `${followersEditingProduct?.name || 'Producto'} - ${followersForm.servicio.trim() || 'Servicio'}`,
+                            titulo: `${followersForm.plataforma.trim() || 'Red'} - ${followersForm.servicio.trim() || 'Servicio'}`,
                             descripcion: followersForm.descripcion.trim() || null,
                             detalles: followersForm.detalles.trim() || null,
                             notas: followersForm.notas.trim() || null,
@@ -9525,12 +9532,80 @@ const [followersEditingProduct, setFollowersEditingProduct] = useState<ProviderP
                   <div className={styles.providerFollowersHead}>
                     <div>
                       <p className={styles.sectionEyebrow}>Seguidores</p>
-                      <h3 className={styles.sectionTitle}>Administra servicios</h3>
+                      <h3 className={styles.sectionTitle}>Administra redes y servicios</h3>
                       <p className={styles.sectionLead}>
-                        Crea tu producto y luego haz click en "Seguidores" dentro del producto para completar los datos.
+                        Agrega una red social, luego haz click en ella para completar los servicios.
                       </p>
                     </div>
+                    <button
+                      type='button'
+                      className={styles.providerGhostButton}
+                      onClick={() => setShowFollowersPanel(value => !value)}
+                    >
+                      {showFollowersPanel ? 'Ocultar' : 'Seguidores'}
+                    </button>
                   </div>
+
+                  {showFollowersPanel && (
+                    <div className={styles.providerFollowersPanel}>
+                      <div className={styles.providerFollowersRow}>
+                        <label className={styles.inputBlock}>
+                          <span>Red social</span>
+                          <input
+                            type='text'
+                            value={followersNewPlatform}
+                            onChange={e => setFollowersNewPlatform(e.target.value)}
+                            placeholder='Instagram, TikTok, YouTube...'
+                          />
+                        </label>
+                        <div className={styles.providerFollowersActions}>
+                          <button
+                            type='button'
+                            className={styles.primaryBtn}
+                            onClick={() => {
+                              const next = followersNewPlatform.trim()
+                              if (!next) return
+                              setFollowersPlatforms(list =>
+                                list.includes(next) ? list : [...list, next]
+                              )
+                              setFollowersNewPlatform('')
+                            }}
+                          >
+                            Agregar red
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className={styles.providerFollowersChips}>
+                        {followersPlatforms.length === 0 && (
+                          <p className={styles.panelEmpty}>Aun no hay redes. Agrega una arriba.</p>
+                        )}
+                        {followersPlatforms.map(platform => (
+                          <button
+                            key={platform}
+                            type='button'
+                            className={styles.providerFollowersChip}
+                            onClick={() => {
+                              setFollowersForm(form => ({
+                                ...form,
+                                plataforma: platform,
+                                categoria: '',
+                                servicio: '',
+                                descripcion: '',
+                                detalles: '',
+                                notas: '',
+                                precioPorMil: '',
+                                tiempoPromedio: '',
+                              }))
+                              setShowFollowersModal(true)
+                            }}
+                          >
+                            {platform}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </section>
               )}
               {!isOwner && providerLimitUnknown && (
@@ -10019,28 +10094,6 @@ const [followersEditingProduct, setFollowersEditingProduct] = useState<ProviderP
                                   </div>
 
                                   <div className={styles.providerProductQuickActions}>
-                                    {isVyron && (
-                                      <button
-                                        type='button'
-                                        className={styles.providerToggleUnderButton}
-                                        onClick={() => {
-                                          setFollowersEditingProduct(product)
-                                          setFollowersForm({
-                                            categoria: '',
-                                            plataforma: '',
-                                            servicio: '',
-                                            descripcion: '',
-                                            detalles: '',
-                                            notas: '',
-                                            precioPorMil: '',
-                                            tiempoPromedio: '',
-                                          })
-                                          setShowFollowersModal(true)
-                                        }}
-                                      >
-                                        Seguidores
-                                      </button>
-                                    )}
                                     <button
                                       type='button'
                                       className={styles.providerEditIconButton}
@@ -13709,6 +13762,7 @@ const [followersEditingProduct, setFollowersEditingProduct] = useState<ProviderP
             <p className={styles.scratchNote}>
               📱 WhatsApp: “Hola vengo a reclamar mi premio 😁”
             </p>
+            <p className={styles.scratchNote}>Premios manuales (excepto cashback).</p>
             <div className={styles.scratchActions}>
               <button type='button' className={styles.scratchOk} onClick={claimAffiliatePrize}>
                 Reclamar premio
