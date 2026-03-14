@@ -8679,11 +8679,14 @@
   aspect-ratio: 1 / 1;
   background: radial-gradient(circle at 40% 30%, rgba(59, 130, 246, 0.08), transparent 42%), #0b0b14;
   border: 1px solid rgba(148, 163, 184, 0.32);
-  border-radius: 16px;
+  border-radius: 18px;
   overflow: hidden;
   display: grid;
   place-items: center;
   touch-action: none;
+  box-shadow:
+    0 16px 28px rgba(2, 6, 23, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .imageEditorStage img {
@@ -8691,6 +8694,28 @@
   height: 100%;
   object-fit: cover;
   transition: transform 0.08s ease;
+  pointer-events: none;
+}
+
+.imageEditorBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: #e2e8f0;
+  font-weight: 800;
+  font-size: 0.8rem;
+  z-index: 2;
+}
+
+.imageEditorFrame {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.14);
   pointer-events: none;
 }
 
@@ -8708,6 +8733,12 @@
 
 .imageEditorControls input[type='range'] {
   accent-color: #3b82f6;
+}
+
+.imageEditorHint {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
 }
 
 .imageEditorActions {

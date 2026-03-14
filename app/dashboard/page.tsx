@@ -13044,14 +13044,18 @@ export default function UserDashboardPage() {
                   onWheel={handleEditorWheel}
                 >
                   {imageEditorSrc && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={imageEditorSrc}
-                      alt='Previsualizacion'
-                      style={{
-                        transform: `translate(${imageEditorOffsetX * 50}%, ${imageEditorOffsetY * 50}%) scale(${imageEditorScale})`,
-                      }}
-                    />
+                    <>
+                      <div className={styles.imageEditorBadge}>Así se verá</div>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={imageEditorSrc}
+                        alt='Previsualizacion'
+                        style={{
+                          transform: `translate(${imageEditorOffsetX * 50}%, ${imageEditorOffsetY * 50}%) scale(${imageEditorScale})`,
+                        }}
+                      />
+                      <div className={styles.imageEditorFrame} aria-hidden />
+                    </>
                   )}
                 </div>
               </div>
@@ -13091,6 +13095,9 @@ export default function UserDashboardPage() {
                   />
                 </label>
               </div>
+              <p className={styles.imageEditorHint}>
+                En PC: rueda = zoom, click y arrastra para mover. En móvil: pellizca para zoom y arrastra con el dedo.
+              </p>
             </div>
 
             <div className={styles.imageEditorActions}>
