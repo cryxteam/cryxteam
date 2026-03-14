@@ -1763,6 +1763,12 @@ export default function UserDashboardPage() {
   const providerNotifyLastCountRef = useRef(0)
   const providerImageInputRef = useRef<HTMLInputElement | null>(null)
   const providerAvatarInputRef = useRef<HTMLInputElement | null>(null)
+  const [imageEditorOpen, setImageEditorOpen] = useState(false)
+  const [imageEditorSrc, setImageEditorSrc] = useState<string | null>(null)
+  const [imageEditorFile, setImageEditorFile] = useState<File | null>(null)
+  const [imageEditorScale, setImageEditorScale] = useState(1.1)
+  const [imageEditorOffsetX, setImageEditorOffsetX] = useState(0)
+  const [imageEditorOffsetY, setImageEditorOffsetY] = useState(0)
   const [isProviderAvatarUploading, setIsProviderAvatarUploading] = useState(false)
   const ownerNewFilterImageInputRef = useRef<HTMLInputElement | null>(null)
   const ownerEditFilterImageInputRef = useRef<HTMLInputElement | null>(null)
@@ -3865,32 +3871,15 @@ export default function UserDashboardPage() {
       return
     }
 
-    setIsProviderImageUploading(true)
     setProviderMsgType('idle')
-    setProviderMsg('Subiendo imagen...')
-
-    const safeName = sanitizeFilePart(providerProductForm.name || 'producto')
-    const ext = resolveFileExtension(file)
-    const objectPath = `${userId}/${Date.now()}-${safeName}.${ext}`
-
-    const uploadResult = await uploadImageExternally({
-      file,
-      objectPath,
-      purpose: 'product_logo',
-    })
-
-    if (!uploadResult.ok) {
-      setIsProviderImageUploading(false)
-      setProviderMsgType('error')
-      setProviderMsg(`No se pudo subir la imagen al hosting externo. ${uploadResult.message}`)
-      event.target.value = ''
-      return
-    }
-
-    setProviderProductForm(previous => ({ ...previous, logo: uploadResult.url }))
-    setIsProviderImageUploading(false)
-    setProviderMsgType('ok')
-    setProviderMsg('Imagen subida correctamente.')
+    setProviderMsg('Ajusta la imagen antes de subirla.')
+    if (imageEditorSrc) URL.revokeObjectURL(imageEditorSrc)
+    setImageEditorFile(file)
+    setImageEditorSrc(URL.createObjectURL(file))
+    setImageEditorScale(1.1)
+    setImageEditorOffsetX(0)
+    setImageEditorOffsetY(0)
+    setImageEditorOpen(true)
     event.target.value = ''
   }
 
@@ -3995,6 +3984,84 @@ export default function UserDashboardPage() {
     )
     setProviderMsgType('ok')
     setProviderMsg('Foto de perfil eliminada.')
+  }
+
+  async function buildCroppedImageFromEditor(): Promise<File | null> {
+    if (!imageEditorSrc || !imageEditorFile) return null
+    const img = document.createElement('img')
+    img.src = imageEditorSrc
+    await new Promise((resolve, reject) => {
+      img.onload = resolve
+      img.onerror = reject
+    })
+
+    const size = 640
+    const canvas = document.createElement('canvas')
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+
+    const scale = imageEditorScale
+    const offsetX = imageEditorOffsetX * size * 0.5
+    const offsetY = imageEditorOffsetY * size * 0.5
+
+    const drawW = img.width * scale
+    const drawH = img.height * scale
+    const dx = size / 2 - drawW / 2 + offsetX
+    const dy = size / 2 - drawH / 2 + offsetY
+
+    ctx.fillStyle = '#0b0b14'
+    ctx.fillRect(0, 0, size, size)
+    ctx.drawImage(img, dx, dy, drawW, drawH)
+
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(b => resolve(b), 'image/png', 0.95))
+    if (!blob) return null
+    const safeName = sanitizeFilePart(providerProductForm.name || 'producto')
+    return new File([blob], `${safeName}-logo.png`, { type: 'image/png' })
+  }
+
+  function closeImageEditor() {
+    if (imageEditorSrc) URL.revokeObjectURL(imageEditorSrc)
+    setImageEditorSrc(null)
+    setImageEditorFile(null)
+    setImageEditorOpen(false)
+  }
+
+  async function confirmImageEditAndUpload() {
+    if (!userId || !imageEditorFile) return
+    setIsProviderImageUploading(true)
+    setProviderMsgType('idle')
+    setProviderMsg('Subiendo imagen...')
+
+    try {
+      const finalFile = (await buildCroppedImageFromEditor()) || imageEditorFile
+      const safeName = sanitizeFilePart(providerProductForm.name || 'producto')
+      const ext = resolveFileExtension(finalFile)
+      const objectPath = `${userId}/${Date.now()}-${safeName}.${ext}`
+
+      const uploadResult = await uploadImageExternally({
+        file: finalFile,
+        objectPath,
+        purpose: 'product_logo',
+      })
+
+      if (!uploadResult.ok) {
+        setProviderMsgType('error')
+        setProviderMsg(`No se pudo subir la imagen al hosting externo. ${uploadResult.message}`)
+        return
+      }
+
+      setProviderProductForm(previous => ({ ...previous, logo: uploadResult.url }))
+      setProviderMsgType('ok')
+      setProviderMsg('Imagen subida correctamente.')
+    } catch (error) {
+      setProviderMsgType('error')
+      setProviderMsg('No se pudo procesar la imagen.')
+    } finally {
+      setIsProviderImageUploading(false)
+      closeImageEditor()
+    }
   }
 
   function unlockProviderPanel() {
@@ -12851,6 +12918,86 @@ export default function UserDashboardPage() {
               </button>
             </div>
           </article>
+        </div>
+      )}
+
+      {imageEditorOpen && (
+        <div className={styles.imageEditorOverlay} role='dialog' aria-modal='true'>
+          <div className={styles.imageEditorCard}>
+            <div className={styles.imageEditorHeader}>
+              <h4>Ajusta tu imagen</h4>
+              <button type='button' className={styles.imageEditorClose} onClick={closeImageEditor} aria-label='Cerrar'>
+                ×
+              </button>
+            </div>
+
+            <div className={styles.imageEditorLayout}>
+              <div className={styles.imageEditorPreview}>
+                <div className={styles.imageEditorStage}>
+                  {imageEditorSrc && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={imageEditorSrc}
+                      alt='Previsualizacion'
+                      style={{
+                        transform: `translate(${imageEditorOffsetX * 50}%, ${imageEditorOffsetY * 50}%) scale(${imageEditorScale})`,
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.imageEditorControls}>
+                <label>
+                  <span>Zoom</span>
+                  <input
+                    type='range'
+                    min={1}
+                    max={3}
+                    step={0.01}
+                    value={imageEditorScale}
+                    onChange={event => setImageEditorScale(parseFloat(event.target.value))}
+                  />
+                </label>
+                <label>
+                  <span>Mover X</span>
+                  <input
+                    type='range'
+                    min={-0.5}
+                    max={0.5}
+                    step={0.01}
+                    value={imageEditorOffsetX}
+                    onChange={event => setImageEditorOffsetX(parseFloat(event.target.value))}
+                  />
+                </label>
+                <label>
+                  <span>Mover Y</span>
+                  <input
+                    type='range'
+                    min={-0.5}
+                    max={0.5}
+                    step={0.01}
+                    value={imageEditorOffsetY}
+                    onChange={event => setImageEditorOffsetY(parseFloat(event.target.value))}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className={styles.imageEditorActions}>
+              <button type='button' className={styles.imageEditorGhost} onClick={closeImageEditor}>
+                Cancelar
+              </button>
+              <button
+                type='button'
+                className={styles.imageEditorSave}
+                disabled={isProviderImageUploading}
+                onClick={() => void confirmImageEditAndUpload()}
+              >
+                {isProviderImageUploading ? 'Subiendo...' : 'Guardar y subir'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
