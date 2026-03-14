@@ -512,9 +512,7 @@ type OwnerProductNameFilterDraft = {
 type OwnerDialogType = 'ok' | 'error' | 'confirm'
 
 const SUPPORT_NUMBER = '51929436705'
-const SUPPORT_URL = `https://wa.me/${SUPPORT_NUMBER}?text=${encodeURIComponent(
-  'Hola quiero soporte en CRYXTEAM.'
-)}`
+const SUPPORT_URL = buildWhatsappUrl(SUPPORT_NUMBER, ['Hola quiero soporte en CRYXTEAM.'])
 const COMMUNITY_URL = 'https://chat.whatsapp.com/DAq3BQwm4YgA2Ao1loPxFO'
 const PRODUCT_IMAGE_BUCKET = 'product-images'
 const PROVIDER_AVATAR_BUCKET = 'provider-avatars'
@@ -1123,7 +1121,18 @@ function buildWhatsappUrl(phone: string, lines: string[]) {
     .normalize('NFC')
     .replace(/\uFFFD/g, '')
   const encodedText = encodeURIComponent(text)
-  return `https://wa.me/${phone}?text=${encodedText}`
+  return `https://api.whatsapp.com/send?phone=${phone}&text=${encodedText}`
+}
+
+function buildWhatsappTextLink(phone: string, text: string) {
+  if (!phone) return ''
+  return buildWhatsappUrl(phone, [text])
+}
+
+function buildWhatsappShareUrl(text: string) {
+  const normalized = text.normalize('NFC').replace(/\uFFFD/g, '')
+  const encodedText = encodeURIComponent(normalized)
+  return `https://api.whatsapp.com/send?text=${encodedText}`
 }
 
 const WA_EMOJI = {
@@ -1137,26 +1146,6 @@ const WA_EMOJI = {
   pin: '\uD83D\uDD22',
   hands: '\uD83D\uDE4C',
   hourglass: '\u23F3\uFE0F',
-}
-
-const WA_SYMBOLS_SAFE = {
-  check: '[OK]',
-  handshake: '',
-  sparkles: '',
-  movie: '[SERVICIO]',
-  mail: '[CORREO]',
-  lock: '[CLAVE]',
-  profile: '[PERFIL]',
-  pin: '[PIN]',
-  hands: '',
-  hourglass: '[VENCE]',
-}
-
-function getWhatsappSymbols() {
-  if (typeof navigator === 'undefined') return WA_SYMBOLS_SAFE
-  const ua = navigator.userAgent || ''
-  if (/Windows/i.test(ua)) return WA_SYMBOLS_SAFE
-  return WA_EMOJI
 }
 
 function normalizeCredentialKey(value: string) {
@@ -3812,37 +3801,24 @@ export default function UserDashboardPage() {
     const customerPhone = normalizeWhatsappPhone(order.customerPhone)
     if (!customerPhone || !order.credentialsText) return ''
     const credentialInfo = resolveOrderCredentialForMessage(order)
-    const waSymbols = getWhatsappSymbols()
-    const thanksLine = [
-      waSymbols.check,
-      '¡Gracias por tu compra!',
-      waSymbols.handshake,
-      waSymbols.sparkles,
-    ]
-      .filter(Boolean)
-      .join(' ')
     const lines = [
-      thanksLine,
-      `${waSymbols.movie ? `${waSymbols.movie} ` : ''}*Acceso contratado:* *${order.productName}*`,
+      `${WA_EMOJI.check} ¡Gracias por tu compra! ${WA_EMOJI.handshake}${WA_EMOJI.sparkles}`,
+      `${WA_EMOJI.movie} *Acceso contratado:* *${order.productName}*`,
       '',
-      `${waSymbols.mail ? `${waSymbols.mail} ` : ''}*Correo:* ${credentialInfo.emailValue}`,
-      `${waSymbols.lock ? `${waSymbols.lock} ` : ''}*Contrasena:* ${credentialInfo.passwordValue}`,
+      `${WA_EMOJI.mail} *Correo:* ${credentialInfo.emailValue}`,
+      `${WA_EMOJI.lock} *Contraseña:* ${credentialInfo.passwordValue}`,
     ]
 
     if (credentialInfo.isProfileProduct) {
       lines.push(
-        `${waSymbols.profile ? `${waSymbols.profile} ` : ''}*Perfil:* ${credentialInfo.profileValue}`,
-        `${waSymbols.pin ? `${waSymbols.pin} ` : ''}*PIN:* ${credentialInfo.pinValue}`
+        '',
+        `${WA_EMOJI.profile} *Perfil:* ${credentialInfo.profileValue}`,
+        `${WA_EMOJI.pin} *PIN:* ${credentialInfo.pinValue}`
       )
     }
     lines.push(
       '',
-      [
-        '¿Duda o problema? Respóndeme por aquí y te ayudo al toque',
-        waSymbols.hands,
-      ]
-        .filter(Boolean)
-        .join(' ')
+      `¿Duda o problema? Respóndeme por aquí y te ayudo al toque ${WA_EMOJI.hands}`
     )
     return buildWhatsappUrl(customerPhone, lines)
   }
@@ -3851,30 +3827,24 @@ export default function UserDashboardPage() {
     const customerPhone = normalizeWhatsappPhone(order.customerPhone)
     if (!customerPhone || !order.credentialsText) return ''
     const credentialInfo = resolveOrderCredentialForMessage(order)
-    const waSymbols = getWhatsappSymbols()
     const lines = [
-      `${waSymbols.hourglass ? `${waSymbols.hourglass} ` : ''}*Tu servicio está por vencer*`,
+      `${WA_EMOJI.hourglass} *Tu servicio está por vencer*`,
       `Producto: *${order.productName}*`,
       '',
-      `${waSymbols.mail ? `${waSymbols.mail} ` : ''}*Correo:* ${credentialInfo.emailValue}`,
-      `${waSymbols.lock ? `${waSymbols.lock} ` : ''}*Contrasena:* ${credentialInfo.passwordValue}`,
+      `${WA_EMOJI.mail} *Correo:* ${credentialInfo.emailValue}`,
+      `${WA_EMOJI.lock} *Contraseña:* ${credentialInfo.passwordValue}`,
     ]
 
     if (credentialInfo.isProfileProduct) {
       lines.push(
-        `${waSymbols.profile ? `${waSymbols.profile} ` : ''}*Perfil:* ${credentialInfo.profileValue}`,
-        `${waSymbols.pin ? `${waSymbols.pin} ` : ''}*PIN:* ${credentialInfo.pinValue}`
+        `${WA_EMOJI.profile} *Perfil:* ${credentialInfo.profileValue}`,
+        `${WA_EMOJI.pin} *PIN:* ${credentialInfo.pinValue}`
       )
     }
 
     lines.push(
       '',
-      [
-        'Para renovar sin cortes, respóndeme *RENOVAR* y lo gestiono al toque',
-        waSymbols.check,
-      ]
-        .filter(Boolean)
-        .join(' ')
+      `Para renovar sin cortes, respóndeme *RENOVAR* y lo gestiono al toque ${WA_EMOJI.check}`
     )
     return buildWhatsappUrl(customerPhone, lines)
   }
@@ -8880,13 +8850,13 @@ export default function UserDashboardPage() {
   )
   const nextReward = affiliateRewards.find(level => !level.unlocked) ?? null
   const unlockedRewards = affiliateRewards.filter(level => level.unlocked)
-  const rewardsSupportUrl = `https://wa.me/${SUPPORT_NUMBER}?text=${encodeURIComponent(
+  const rewardsSupportUrl = buildWhatsappUrl(SUPPORT_NUMBER, [
     unlockedRewards.length > 0
       ? `Hola, quiero reclamar mis recompensas de afiliacion. Afiliados aprobados: ${affiliateSummary.approved}. Niveles desbloqueados: ${unlockedRewards
           .map(level => level.title)
           .join(', ')}.`
-      : `Hola, quiero informacion sobre el programa de recompensas de afiliacion.`
-  )}`
+      : `Hola, quiero informacion sobre el programa de recompensas de afiliacion.`,
+  ])
   const topLinkClass = (isActive: boolean, isAccount = false) =>
     `${styles.topLink} ${isActive ? styles.topLinkActive : ''} ${isAccount ? styles.userChip : ''}`.trim()
   const ownerQuickCards: Array<{ label: string; value: string; tab: OwnerTabId }> = [
@@ -10323,10 +10293,8 @@ export default function UserDashboardPage() {
                           const orderKey = String(order.id)
                           const isSelected = providerSelectedOrderId === orderKey
                           const clientPhone = normalizeWhatsappPhone(order.buyerPhone || '')
-                          const whatsappText = encodeURIComponent(
-                            `Hola ${order.buyerName || ''}, te escribo por tu pedido #${order.id} de ${order.productName}.`
-                          )
-                          const whatsappHref = clientPhone ? `https://wa.me/${clientPhone}?text=${whatsappText}` : ''
+                          const whatsappText = `Hola ${order.buyerName || ''}, te escribo por tu pedido #${order.id} de ${order.productName}.`
+                          const whatsappHref = buildWhatsappTextLink(clientPhone, whatsappText)
 
                           return (
                             <article
@@ -10394,12 +10362,8 @@ export default function UserDashboardPage() {
                           profilePin: '',
                         }
                         const clientPhone = normalizeWhatsappPhone(providerSelectedOrder.buyerPhone || '')
-                        const whatsappText = encodeURIComponent(
-                          `Hola ${providerSelectedOrder.buyerName || ''}, te escribo por tu pedido #${
-                            providerSelectedOrder.id
-                          } de ${providerSelectedOrder.productName}.`
-                        )
-                        const whatsappHref = clientPhone ? `https://wa.me/${clientPhone}?text=${whatsappText}` : ''
+                        const whatsappText = `Hola ${providerSelectedOrder.buyerName || ''}, te escribo por tu pedido #${providerSelectedOrder.id} de ${providerSelectedOrder.productName}.`
+                        const whatsappHref = buildWhatsappTextLink(clientPhone, whatsappText)
 
                         return (
                           <div className={styles.providerOrderModalBackdrop} role='presentation'>
@@ -10617,12 +10581,8 @@ export default function UserDashboardPage() {
                         const hasLinkedOrder = providerSelectedTicket.orderId !== null
                         const isProfilesTicket = isProfilesAccountType(providerSelectedTicket.orderAccountType)
                         const clientPhone = normalizeWhatsappPhone(providerSelectedTicket.buyerPhone || '')
-                        const whatsappText = encodeURIComponent(
-                          `Hola ${providerSelectedTicket.buyerName || ''}, te escribo por tu ticket #${
-                            providerSelectedTicket.id
-                          } (${providerSelectedTicket.productName}).`
-                        )
-                        const whatsappHref = clientPhone ? `https://wa.me/${clientPhone}?text=${whatsappText}` : ''
+                        const whatsappText = `Hola ${providerSelectedTicket.buyerName || ''}, te escribo por tu ticket #${providerSelectedTicket.id} (${providerSelectedTicket.productName}).`
+                        const whatsappHref = buildWhatsappTextLink(clientPhone, whatsappText)
                         const currentLoginUser = providerSelectedTicket.credentialLoginUser.trim()
                         const currentLoginPassword = providerSelectedTicket.credentialLoginPassword.trim()
                         const currentProfileLabel = providerSelectedTicket.credentialProfileLabel.trim()
@@ -10835,12 +10795,8 @@ export default function UserDashboardPage() {
 
               {providerBuyerModal && (() => {
                 const buyerPhone = normalizeWhatsappPhone(providerBuyerModal.phone || '')
-                const buyerWhatsappText = encodeURIComponent(
-                  `Hola ${providerBuyerModal.name || ''}, te escribo por tu compra en la plataforma.`
-                )
-                const buyerWhatsappHref = buyerPhone
-                  ? `https://wa.me/${buyerPhone}?text=${buyerWhatsappText}`
-                  : ''
+                const buyerWhatsappText = `Hola ${providerBuyerModal.name || ''}, te escribo por tu compra en la plataforma.`
+                const buyerWhatsappHref = buildWhatsappTextLink(buyerPhone, buyerWhatsappText)
                 return (
                   <div className={styles.providerBuyerModalBackdrop} role='presentation'>
                     <section
@@ -13543,7 +13499,7 @@ export default function UserDashboardPage() {
                 Reclamar premio
               </button>
               <a
-                href={`https://wa.me/?text=${encodeURIComponent('Hola vengo a reclamar mi premio 😁')}`}
+                href={buildWhatsappShareUrl('Hola vengo a reclamar mi premio 😁')}
                 className={styles.scratchWhats}
                 target='_blank'
                 rel='noreferrer'
