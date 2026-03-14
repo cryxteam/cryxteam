@@ -8680,7 +8680,7 @@
   padding: 12px;
   display: grid;
   gap: 10px;
-  width: min(340px, 96vw);
+  width: 320px;
   box-shadow:
     0 16px 26px rgba(2, 6, 23, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.03);

@@ -13036,11 +13036,9 @@ export default function UserDashboardPage() {
               <div className={styles.imageEditorLayout}>
               <div className={styles.imageEditorPreview}>
                 <div className={styles.imageEditorCardPreview}>
-                  <div className={styles.imageEditorStageWrap}>
+                    <div className={styles.imageEditorStageWrap}>
                     <div className={styles.imageEditorBadgeRow}>
-                      {providerProductForm.termsAndConditions.trim() && (
-                        <span className={styles.imageEditorPill}>Términos</span>
-                      )}
+                      <span className={styles.imageEditorPill}>Términos</span>
                       <span
                         className={`${styles.imageEditorPill} ${
                           providerProductForm.renewable ? styles.imageEditorPillSuccess : styles.imageEditorPillWarning
@@ -13076,7 +13074,9 @@ export default function UserDashboardPage() {
 
                     <div className={styles.imageEditorBottomRow}>
                       <span className={styles.imageEditorStock}>
-                        {(providerInventoryAccounts?.length || 2) + ' con stock'}
+                        {providerProductForm.deliveryMode === 'request'
+                          ? 'A pedido'
+                          : `${providerInventoryAccounts?.length || 2} con stock`}
                       </span>
                       <span className={styles.imageEditorPrice}>S/ {providerProductForm.priceGuest || '0.00'}</span>
                     </div>
