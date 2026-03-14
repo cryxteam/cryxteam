@@ -9534,7 +9534,7 @@ const [followersPlatforms, setFollowersPlatforms] = useState<string[]>([])
                           })
                           const { data: pkgRows } = await supabase
                             .from('follower_packages')
-                            .select('id,categoria,plataforma,descripcion,detalles,notas,precio_por_mil,tiempo_promedio')
+                            .select('id,categoria,plataforma,servicio,descripcion,detalles,notas,precio_por_mil,tiempo_promedio')
                             .eq('provider_id', providerId)
                             .order('created_at', { ascending: false })
                           if (pkgRows) setFollowerPackages(pkgRows)
