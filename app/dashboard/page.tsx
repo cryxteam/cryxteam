@@ -1139,6 +1139,26 @@ const WA_EMOJI = {
   hourglass: '\u23F3\uFE0F',
 }
 
+const WA_SYMBOLS_SAFE = {
+  check: '[OK]',
+  handshake: '',
+  sparkles: '',
+  movie: '[SERVICIO]',
+  mail: '[CORREO]',
+  lock: '[CLAVE]',
+  profile: '[PERFIL]',
+  pin: '[PIN]',
+  hands: '',
+  hourglass: '[VENCE]',
+}
+
+function getWhatsappSymbols() {
+  if (typeof navigator === 'undefined') return WA_SYMBOLS_SAFE
+  const ua = navigator.userAgent || ''
+  if (/Windows/i.test(ua)) return WA_SYMBOLS_SAFE
+  return WA_EMOJI
+}
+
 function normalizeCredentialKey(value: string) {
   return value
     .normalize('NFD')
@@ -3792,21 +3812,38 @@ export default function UserDashboardPage() {
     const customerPhone = normalizeWhatsappPhone(order.customerPhone)
     if (!customerPhone || !order.credentialsText) return ''
     const credentialInfo = resolveOrderCredentialForMessage(order)
+    const waSymbols = getWhatsappSymbols()
+    const thanksLine = [
+      waSymbols.check,
+      '¡Gracias por tu compra!',
+      waSymbols.handshake,
+      waSymbols.sparkles,
+    ]
+      .filter(Boolean)
+      .join(' ')
     const lines = [
-      `${WA_EMOJI.check} ¡Gracias por tu compra! ${WA_EMOJI.handshake}${WA_EMOJI.sparkles}`,
-      `${WA_EMOJI.movie} *Acceso contratado:* *${order.productName}*`,
+      thanksLine,
+      `${waSymbols.movie ? `${waSymbols.movie} ` : ''}*Acceso contratado:* *${order.productName}*`,
       '',
-      `${WA_EMOJI.mail} *Correo:* ${credentialInfo.emailValue}`,
-      `${WA_EMOJI.lock} *Contrasena:* ${credentialInfo.passwordValue}`,
+      `${waSymbols.mail ? `${waSymbols.mail} ` : ''}*Correo:* ${credentialInfo.emailValue}`,
+      `${waSymbols.lock ? `${waSymbols.lock} ` : ''}*Contrasena:* ${credentialInfo.passwordValue}`,
     ]
 
     if (credentialInfo.isProfileProduct) {
       lines.push(
-        `${WA_EMOJI.profile} *Perfil:* ${credentialInfo.profileValue}`,
-        `${WA_EMOJI.pin} *PIN:* ${credentialInfo.pinValue}`
+        `${waSymbols.profile ? `${waSymbols.profile} ` : ''}*Perfil:* ${credentialInfo.profileValue}`,
+        `${waSymbols.pin ? `${waSymbols.pin} ` : ''}*PIN:* ${credentialInfo.pinValue}`
       )
     }
-    lines.push('', `¿Duda o problema? Respóndeme por aquí y te ayudo al toque ${WA_EMOJI.hands}`)
+    lines.push(
+      '',
+      [
+        '¿Duda o problema? Respóndeme por aquí y te ayudo al toque',
+        waSymbols.hands,
+      ]
+        .filter(Boolean)
+        .join(' ')
+    )
     return buildWhatsappUrl(customerPhone, lines)
   }
 
@@ -3814,22 +3851,31 @@ export default function UserDashboardPage() {
     const customerPhone = normalizeWhatsappPhone(order.customerPhone)
     if (!customerPhone || !order.credentialsText) return ''
     const credentialInfo = resolveOrderCredentialForMessage(order)
+    const waSymbols = getWhatsappSymbols()
     const lines = [
-      `${WA_EMOJI.hourglass} *Tu servicio está por vencer*`,
+      `${waSymbols.hourglass ? `${waSymbols.hourglass} ` : ''}*Tu servicio está por vencer*`,
       `Producto: *${order.productName}*`,
       '',
-      `${WA_EMOJI.mail} *Correo:* ${credentialInfo.emailValue}`,
-      `${WA_EMOJI.lock} *Contrasena:* ${credentialInfo.passwordValue}`,
+      `${waSymbols.mail ? `${waSymbols.mail} ` : ''}*Correo:* ${credentialInfo.emailValue}`,
+      `${waSymbols.lock ? `${waSymbols.lock} ` : ''}*Contrasena:* ${credentialInfo.passwordValue}`,
     ]
 
     if (credentialInfo.isProfileProduct) {
       lines.push(
-        `${WA_EMOJI.profile} *Perfil:* ${credentialInfo.profileValue}`,
-        `${WA_EMOJI.pin} *PIN:* ${credentialInfo.pinValue}`
+        `${waSymbols.profile ? `${waSymbols.profile} ` : ''}*Perfil:* ${credentialInfo.profileValue}`,
+        `${waSymbols.pin ? `${waSymbols.pin} ` : ''}*PIN:* ${credentialInfo.pinValue}`
       )
     }
 
-    lines.push('', `Para renovar sin cortes, respóndeme *RENOVAR* y lo gestiono al toque ${WA_EMOJI.check}`)
+    lines.push(
+      '',
+      [
+        'Para renovar sin cortes, respóndeme *RENOVAR* y lo gestiono al toque',
+        waSymbols.check,
+      ]
+        .filter(Boolean)
+        .join(' ')
+    )
     return buildWhatsappUrl(customerPhone, lines)
   }
 
