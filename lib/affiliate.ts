@@ -158,10 +158,11 @@ export async function affiliateUserByUsernameAction(params: {
   if (targetId === params.referrerUserId) return { code: 'CANNOT_SELF_AFFILIATE' }
   if (targetReferredBy) return { code: 'ALREADY_AFFILIATED' }
 
+
   if (hasReferredByColumn) {
     const updatePayloads: Array<Record<string, unknown>> = [
-      { referred_by: params.referrerUserId, is_approved: true },
-      { referred_by: params.referrerUserId },
+      { referred_by: params.referrerUserId, afiliador: params.referrerUserId, is_distributor: true, is_approved: true },
+      { referred_by: params.referrerUserId, afiliador: params.referrerUserId, is_distributor: true },
     ]
 
     for (const payload of updatePayloads) {
@@ -170,6 +171,7 @@ export async function affiliateUserByUsernameAction(params: {
         .update(payload)
         .eq('id', targetId)
         .is('referred_by', null)
+        .is('afiliador', null)
         .select('id')
         .limit(1)
 
@@ -191,94 +193,20 @@ export async function affiliateUserByUsernameAction(params: {
     }
   }
 
-  const now = new Date().toISOString()
-  const insertPlans: Array<{ table: string; payloads: Array<Record<string, unknown>> }> = [
-    {
-      table: 'user_affiliations',
-      payloads: [
-        {
-          referrer_user_id: params.referrerUserId,
-          referred_user_id: targetId,
-          referrer_username: referrerUsername || null,
-          referred_username: targetResolvedUsername || null,
-          created_at: now,
-        },
-        {
-          referrer_user_id: params.referrerUserId,
-          referred_user_id: targetId,
-          referred_username: targetResolvedUsername || null,
-          created_at: now,
-        },
-        { referrer_user_id: params.referrerUserId, referred_user_id: targetId, created_at: now },
-        { referrer_id: params.referrerUserId, referred_id: targetId, created_at: now },
-      ],
-    },
-    {
-      table: 'affiliations',
-      payloads: [
-        {
-          referrer_user_id: params.referrerUserId,
-          referred_user_id: targetId,
-          referrer_username: referrerUsername || null,
-          referred_username: targetResolvedUsername || null,
-          created_at: now,
-        },
-        {
-          referrer_user_id: params.referrerUserId,
-          referred_user_id: targetId,
-          referred_username: targetResolvedUsername || null,
-          created_at: now,
-        },
-        { referrer_user_id: params.referrerUserId, referred_user_id: targetId, created_at: now },
-        { referrer_id: params.referrerUserId, referred_id: targetId, created_at: now },
-      ],
-    },
-    {
-      table: 'referrals',
-      payloads: [
-        {
-          referrer_user_id: params.referrerUserId,
-          referred_user_id: targetId,
-          referrer_username: referrerUsername || null,
-          referred_username: targetResolvedUsername || null,
-          created_at: now,
-        },
-        {
-          referrer_user_id: params.referrerUserId,
-          referred_user_id: targetId,
-          referred_username: targetResolvedUsername || null,
-          created_at: now,
-        },
-        { referrer_user_id: params.referrerUserId, referred_user_id: targetId, created_at: now },
-        { referrer_id: params.referrerUserId, referred_id: targetId, created_at: now },
-      ],
-    },
-  ]
+  // Fallback: actualizar afiliador/is_distributor aunque no exista referred_by o si fallo lo anterior.
+  const { error: fallbackError } = await params.supabase
+    .from('profiles')
+    .update({ afiliador: params.referrerUserId, is_distributor: true })
+    .eq('id', targetId)
+    .is('afiliador', null)
+    .select('id')
+    .limit(1)
 
-  for (const plan of insertPlans) {
-    for (const payload of plan.payloads) {
-      const { error } = await params.supabase.from(plan.table).insert(payload)
-      if (!error) {
-        if (hasReferredByColumn) {
-          await params.supabase
-            .from('profiles')
-            .update({ referred_by: params.referrerUserId })
-            .eq('id', targetId)
-            .is('referred_by', null)
-        }
-        return { code: 'OK' }
-      }
+  if (!fallbackError) return { code: 'OK' }
 
-      latestMessage = error.message
-      if (isDuplicateError(error.message)) return { code: 'ALREADY_AFFILIATED' }
-      if (isLikelySchemaError(error.message)) continue
-      if (isPermissionError(error.message)) {
-        seenPermissionError = true
-        continue
-      }
-    }
-  }
-
+  latestMessage = fallbackError.message
+  if (isDuplicateError(fallbackError.message)) return { code: 'ALREADY_AFFILIATED' }
+  if (isPermissionError(fallbackError.message)) seenPermissionError = true
   if (seenPermissionError) return { code: 'PERMISSION_DENIED', debugMessage: latestMessage || 'permission_denied' }
   return { code: 'SYSTEM_ERROR', debugMessage: latestMessage || 'affiliate_unknown_error' }
 }

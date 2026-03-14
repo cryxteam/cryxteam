@@ -27,6 +27,7 @@
     "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "^16.1.6",
+    "supabase": "^2.78.1",
     "typescript": "^5"
   }
 }

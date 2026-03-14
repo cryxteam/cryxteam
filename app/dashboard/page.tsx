@@ -189,13 +189,13 @@ type AffiliateRewardLevel = {
 }
 
 const AFFILIATE_PRIZES = [
-  '10% de descuento en tu siguiente compra',
-  '1 recarga gratis (hasta S/15)',
-  'Envío prioritario en tu próximo pedido',
-  'Soporte VIP por 7 días',
-  '5% cashback en tu próxima compra',
-  'Sticker pack sorpresa',
-  'Upgrade a entrega express en tu próximo pedido',
+  'S/10 de descuento en tu siguiente compra',
+  'S/8 directo a tu billetera',
+  'Un perfil gratis (no incluye Netflix)',
+  'Cashback 2% por 7 días',
+  'Mystery drop: fondo animado + cupón sorpresa',
+  'Ticket extra de raspa y gana',
+  'Revisión manual exprés si algo falla en tu próximo pedido',
 ]
 
 const AFFILIATE_PRIZE_LEGENDARY = '🎖 Premio raro: S/500 en créditos + prioridad 6 meses'
@@ -1714,6 +1714,7 @@ export default function UserDashboardPage() {
   const [affiliatePrizeRevealed, setAffiliatePrizeRevealed] = useState(false)
   const scratchCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const scratchIsDownRef = useRef(false)
+  const affiliatePrizeAppliedRef = useRef(false)
   const [showAffiliateNotFoundModal, setShowAffiliateNotFoundModal] = useState(false)
   const [showAffiliateRulesModal, setShowAffiliateRulesModal] = useState(false)
   const [showAffiliateMembersList, setShowAffiliateMembersList] = useState(true)
@@ -3076,6 +3077,7 @@ export default function UserDashboardPage() {
     setShowAffiliatePrize(false)
     setAffiliatePrizeRevealed(false)
     scratchIsDownRef.current = false
+    affiliatePrizeAppliedRef.current = false
   }
 
   const pickAffiliatePrize = () => {
@@ -3085,12 +3087,79 @@ export default function UserDashboardPage() {
     return AFFILIATE_PRIZES[Math.floor(Math.random() * AFFILIATE_PRIZES.length)]
   }
 
+  const applyAffiliatePrize = async (prize: string) => {
+    if (!profile?.id || affiliatePrizeAppliedRef.current) return
+
+    // Efectos por premio
+    const prizeEffects: Record<
+      string,
+      { credit?: number; cashbackRate?: number; cashbackDays?: number }
+    > = {
+      'S/10 de descuento en tu siguiente compra': { credit: 10 },
+      'S/8 directo a tu billetera': { credit: 8 },
+      'Cashback 2% por 7 días': { cashbackRate: 0.02, cashbackDays: 7 },
+      '🎖 Premio raro: S/500 en créditos + prioridad 6 meses': { credit: 500 },
+    }
+
+    const effect = prizeEffects[prize]
+    if (!effect) return
+
+    try {
+      const updates: Record<string, unknown> = {}
+
+      if (effect.credit) {
+        const nextBalance = Math.max(0, toNumber(profile.balance, 0) + effect.credit)
+        updates.balance = nextBalance
+      }
+
+      if (effect.cashbackRate && effect.cashbackDays) {
+        const expires = new Date()
+        expires.setDate(expires.getDate() + effect.cashbackDays)
+        updates.cashback_rate = effect.cashbackRate
+        updates.cashback_expires_at = expires.toISOString()
+      }
+
+      if (Object.keys(updates).length > 0) {
+        const { error, data } = await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('id', profile.id)
+          .select('balance, cashback_rate, cashback_expires_at')
+          .maybeSingle()
+        if (error) throw error
+
+        if (data) {
+          setProfile(prev =>
+            prev
+              ? {
+                  ...prev,
+                  balance: 'balance' in data ? data.balance : prev.balance,
+                  cashback_rate: 'cashback_rate' in data ? data.cashback_rate : prev.cashback_rate,
+                  cashback_expires_at:
+                    'cashback_expires_at' in data ? data.cashback_expires_at : prev.cashback_expires_at,
+                }
+              : prev
+          )
+        }
+      }
+
+      // Log opcional del premio entregado
+      await supabase.from('prize_logs').insert({ user_id: profile.id, prize }).select('id').single()
+
+      affiliatePrizeAppliedRef.current = true
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo entregar el premio'
+      appendMsg(message)
+    }
+  }
+
   const triggerAffiliatePrize = () => {
     const randomPrize = pickAffiliatePrize()
     setAffiliatePrize(randomPrize)
     setAffiliatePrizeRevealed(false)
     setShowAffiliatePrize(true)
     scratchIsDownRef.current = false
+    affiliatePrizeAppliedRef.current = false
   }
 
   function toggleCredentials(orderId: string) {
@@ -3222,7 +3291,7 @@ export default function UserDashboardPage() {
           .eq('id', orderId)
           .eq('buyer_id', userId)
           .maybeSingle(),
-        supabase.from('profiles').select('balance').eq('id', userId).maybeSingle(),
+        supabase.from('profiles').select('balance, cashback_rate, cashback_expires_at').eq('id', userId).maybeSingle(),
       ])
 
       if (orderResult.error) throw new Error(orderResult.error.message)
@@ -3230,10 +3299,16 @@ export default function UserDashboardPage() {
       if (!orderRow?.id) throw new Error('No se encontro la compra para renovar.')
 
       if (buyerProfileResult.error) throw new Error(buyerProfileResult.error.message)
-      buyerBalanceCurrent = Math.max(
-        0,
-        toNumber((buyerProfileResult.data as Record<string, unknown> | null)?.balance, 0)
-      )
+      const buyerProfileRow = (buyerProfileResult.data as Record<string, unknown> | null) ?? null
+      buyerBalanceCurrent = Math.max(0, toNumber(buyerProfileRow?.balance, 0))
+      const buyerCashbackRate = Math.max(0, Number(buyerProfileRow?.cashback_rate ?? 0))
+      const buyerCashbackExpiresAt = toText(buyerProfileRow?.cashback_expires_at)
+      const nowTs = Date.now()
+      const cashbackActive =
+        buyerCashbackRate > 0 &&
+        buyerCashbackExpiresAt &&
+        !Number.isNaN(new Date(buyerCashbackExpiresAt).getTime()) &&
+        new Date(buyerCashbackExpiresAt).getTime() > nowTs
 
       const productId = Math.floor(toNumber(orderRow.product_id ?? order.productId, 0))
       if (productId <= 0) throw new Error('La compra no tiene producto valido.')
@@ -3267,14 +3342,20 @@ export default function UserDashboardPage() {
       const commissionAmount = getProviderCommissionAmount(accountType)
       const providerCredit = Math.max(0, renewalAmount - commissionAmount)
       const nextBuyerBalance = Number((buyerBalanceCurrent - renewalAmount).toFixed(2))
+      const cashbackCredit = cashbackActive
+        ? Number((renewalAmount * buyerCashbackRate).toFixed(2))
+        : 0
+      const nextBuyerBalanceWithCashback = Number((nextBuyerBalance + cashbackCredit).toFixed(2))
 
       const { error: buyerUpdateError } = await supabase
         .from('profiles')
-        .update({ balance: nextBuyerBalance })
+        .update({ balance: nextBuyerBalanceWithCashback })
         .eq('id', userId)
       if (buyerUpdateError) throw new Error(`No se pudo descontar saldo. ${buyerUpdateError.message}`)
       buyerDebited = true
-      setProfile(previous => (previous ? { ...previous, balance: nextBuyerBalance } : previous))
+      setProfile(previous =>
+        previous ? { ...previous, balance: nextBuyerBalanceWithCashback } : previous
+      )
 
       if (providerCredit > 0) {
         const { data: providerProfileData, error: providerReadError } = await supabase
@@ -8572,7 +8653,7 @@ export default function UserDashboardPage() {
 
     const erase = (x: number, y: number) => {
       ctx.beginPath()
-      ctx.arc(x, y, 18, 0, Math.PI * 2)
+      ctx.arc(x, y, 20, 0, Math.PI * 2)
       ctx.fill()
     }
 
@@ -8583,8 +8664,9 @@ export default function UserDashboardPage() {
         if (data[i] === 0) cleared++
       }
       const percent = cleared / (width * height) * 100
-      if (percent > 55) {
+      if (percent > 60) {
         setAffiliatePrizeRevealed(true)
+        void applyAffiliatePrize(affiliatePrize || '')
       }
     }
 
@@ -13313,15 +13395,7 @@ export default function UserDashboardPage() {
             </button>
             <p className={styles.scratchKicker}>🎉 Rasca y gana</p>
             <h4 className={styles.scratchTitle}>¡Premio aleatorio desbloqueado!</h4>
-            <div
-              className={`${styles.scratchArea} ${affiliatePrizeRevealed ? styles.scratchAreaOpen : ''}`}
-              onClick={() => setAffiliatePrizeRevealed(true)}
-              role='button'
-              tabIndex={0}
-              onKeyDown={event => {
-                if (event.key === 'Enter' || event.key === ' ') setAffiliatePrizeRevealed(true)
-              }}
-            >
+            <div className={`${styles.scratchArea} ${affiliatePrizeRevealed ? styles.scratchAreaOpen : ''}`}>
               {!affiliatePrizeRevealed ? (
                 <span className={styles.scratchHint}>Raspa aquí</span>
               ) : (
