@@ -8785,6 +8785,69 @@
   font-weight: 900;
 }
 
+.imageEditorMeta {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(8, 12, 20, 0.85);
+}
+
+.imageEditorProvider {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.imageEditorAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.7), rgba(79, 70, 229, 0.7));
+  color: #f8fafc;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 0.95rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.imageEditorProvider strong {
+  display: block;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+}
+
+.imageEditorProvider small {
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.imageEditorTitle {
+  color: #e5edff;
+  font-weight: 900;
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.imageEditorBadgesLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.imageEditorTinyPill {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.16);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #bfdbfe;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
 .imageEditorControls {
   display: grid;
   gap: 10px;
@@ -8826,6 +8889,12 @@
   border: 2px solid #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
   cursor: pointer;
+}
+
+.imageEditorControlsRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
 }
 
 .imageEditorHint {

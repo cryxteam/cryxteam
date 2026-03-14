@@ -13033,7 +13033,7 @@ export default function UserDashboardPage() {
               </button>
             </div>
 
-            <div className={styles.imageEditorLayout}>
+              <div className={styles.imageEditorLayout}>
               <div className={styles.imageEditorPreview}>
                 <div className={styles.imageEditorCardPreview}>
                   <div className={styles.imageEditorBadgeRow}>
@@ -13078,6 +13078,25 @@ export default function UserDashboardPage() {
                       {(providerInventoryAccounts?.length || 2) + ' con stock'}
                     </span>
                     <span className={styles.imageEditorPrice}>S/ {providerProductForm.priceGuest || '0.00'}</span>
+                  </div>
+
+                  <div className={styles.imageEditorMeta}>
+                    <div className={styles.imageEditorProvider}>
+                      <div className={styles.imageEditorAvatar}>{(profile?.username || 'P')[0]?.toUpperCase()}</div>
+                      <div>
+                        <strong>{profile?.username || 'Proveedor'}</strong>
+                        <small>Cuenta completa | {providerProductForm.renewable ? 'Renovable' : 'No renovable'}</small>
+                      </div>
+                    </div>
+                    <div className={styles.imageEditorTitle}>{providerProductForm.name || 'Producto'}</div>
+                    <div className={styles.imageEditorBadgesLine}>
+                      <span className={styles.imageEditorTinyPill}>Inmediata</span>
+                      {providerProductForm.accountType === 'profiles' && (
+                        <span className={styles.imageEditorTinyPill}>
+                          {providerProductForm.profilesPerAccount || '5'} perfiles
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
