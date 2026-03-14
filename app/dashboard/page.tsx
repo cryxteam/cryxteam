@@ -1772,8 +1772,9 @@ const [followersForm, setFollowersForm] = useState({
 const [followerPackages, setFollowerPackages] = useState<
   {
     id: string
-      categoria: string
-      plataforma: string
+    categoria: string
+    plataforma: string
+    servicio: string
     descripcion: string | null
     detalles: string | null
     notas: string | null
@@ -4003,16 +4004,36 @@ const [followersPlatforms, setFollowersPlatforms] = useState<string[]>([])
   }, [isProvider, providerId])
 
   useEffect(() => {
-    if (!followerPackages.length) return
-    const platforms = Array.from(
-      new Set(
-        followerPackages
-          .map(pkg => (pkg.plataforma || '').trim())
-          .filter(Boolean)
-      )
-    )
-    setFollowersPlatforms(platforms)
-  }, [followerPackages])
+    if (!isProvider || !providerId) return
+    let active = true
+    const loadFollowers = async () => {
+      const [{ data: platformRows }, { data: packageRows }] = await Promise.all([
+        supabase
+          .from('follower_platforms')
+          .select('plataforma')
+          .eq('provider_id', providerId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('follower_packages')
+          .select('id,categoria,plataforma,servicio,descripcion,detalles,notas,precio_por_mil,tiempo_promedio')
+          .eq('provider_id', providerId)
+          .order('created_at', { ascending: false }),
+      ])
+      if (!active) return
+      if (platformRows) setFollowersPlatforms(platformRows.map(row => row.plataforma))
+      if (packageRows) setFollowerPackages(packageRows)
+    }
+    void loadFollowers()
+    const channel = supabase
+      .channel(`followers-provider-${providerId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'follower_platforms' }, loadFollowers)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'follower_packages' }, loadFollowers)
+      .subscribe()
+    return () => {
+      active = false
+      void supabase.removeChannel(channel)
+    }
+  }, [isProvider, providerId])
   const canSeeProvider = isProvider || isOwner
   const canSeeAdminAccounts = isOwnerOrAdmin
   const providerDisplayName = normalizeDisplayName(profile?.username) || 'Proveedor'
@@ -9503,6 +9524,7 @@ const [followersPlatforms, setFollowersPlatforms] = useState<string[]>([])
                             provider_id: providerId,
                             categoria: followersForm.categoria.trim() || 'Seguidores',
                             plataforma: followersForm.plataforma.trim() || 'Instagram',
+                            servicio: followersForm.servicio.trim() || 'Servicio',
                             titulo: `${followersForm.plataforma.trim() || 'Red'} - ${followersForm.servicio.trim() || 'Servicio'}`,
                             descripcion: followersForm.descripcion.trim() || null,
                             detalles: followersForm.detalles.trim() || null,
@@ -9562,12 +9584,13 @@ const [followersPlatforms, setFollowersPlatforms] = useState<string[]>([])
                           <button
                             type='button'
                             className={styles.primaryBtn}
-                            onClick={() => {
+                            onClick={async () => {
                               const next = followersNewPlatform.trim()
-                              if (!next) return
-                              setFollowersPlatforms(list =>
-                                list.includes(next) ? list : [...list, next]
-                              )
+                              if (!next || !providerId) return
+                              await supabase.from('follower_platforms').insert({
+                                provider_id: providerId,
+                                plataforma: next,
+                              })
                               setFollowersNewPlatform('')
                             }}
                           >

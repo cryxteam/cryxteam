@@ -17,14 +17,17 @@ type Category = {
   label: string
 }
 
-type ServiceOption = {
+type FollowerPackageRow = {
   id: string
-  name: string
-  categoryId: string
-  pricePerThousand: number
-  avgTime: string
-  min: number
-  max: number
+  plataforma: string
+  servicio: string
+  categoria: string
+  descripcion: string | null
+  detalles: string | null
+  notas: string | null
+  precio_por_mil: number
+  tiempo_promedio: string | null
+  activo: boolean | null
 }
 
 function formatUsername(value: string | null | undefined) {
@@ -45,11 +48,14 @@ export default function ProsegurPage() {
   const [accountHref, setAccountHref] = useState('/login')
   const [balance, setBalance] = useState<number | null>(null)
   const [activeSection, setActiveSection] = useState('nuevo')
-  const [selectedCategory, setSelectedCategory] = useState('instagram')
+  const [selectedCategory, setSelectedCategory] = useState('Todo')
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [quantity, setQuantity] = useState(1000)
+  const [quantityInput, setQuantityInput] = useState('1000')
   const rechargeRef = useRef<HTMLDivElement | null>(null)
+  const [platforms, setPlatforms] = useState<string[]>([])
+  const [packages, setPackages] = useState<FollowerPackageRow[]>([])
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true)
 
   useEffect(() => {
     let active = true
@@ -109,7 +115,7 @@ export default function ProsegurPage() {
         hint: 'Escudos activos 24/7 para tus entregas.',
       },
     ],
-    []
+    [balance]
   )
 
   const sideNav = [
@@ -119,107 +125,86 @@ export default function ProsegurPage() {
     { id: 'terminos', label: 'Terminos' },
   ]
 
-const categories: Category[] = [
-  { id: 'instagram', label: 'Instagram' },
-  { id: 'facebook', label: 'Facebook' },
-  { id: 'youtube', label: 'Youtube' },
-  { id: 'twitter', label: 'Twitter' },
-  { id: 'spotify', label: 'Spotify' },
-  { id: 'tiktok', label: 'Tiktok' },
-  { id: 'telegram', label: 'Telegram' },
-  { id: 'web', label: 'Website' },
-  { id: 'otro', label: 'Otro' },
-  { id: 'todo', label: 'Todo' },
-]
+  const categories: Category[] = useMemo(() => {
+    const uniquePlatforms = Array.from(new Set(platforms.map(item => item.trim()).filter(Boolean)))
+    const options = uniquePlatforms.map(item => ({ id: item, label: item }))
+    return [{ id: 'Todo', label: 'Todo' }, ...options]
+  }, [platforms])
 
-  const services: ServiceOption[] = [
-    {
-      id: 'svc-ig-visitas',
-      name: 'Instagram visitas | Instant | 0.0556 por 1000',
-      categoryId: 'instagram',
-      pricePerThousand: 0.0556,
-      avgTime: '44 minutos',
-      min: 10,
-      max: 1000000,
+  const loadCatalog = useMemo(
+    () => async () => {
+      setIsCatalogLoading(true)
+      const [{ data: platformRows }, { data: packageRows }] = await Promise.all([
+        supabase.from('follower_platforms').select('plataforma').order('created_at', { ascending: false }),
+        supabase
+          .from('follower_packages')
+          .select('id,plataforma,servicio,categoria,descripcion,detalles,notas,precio_por_mil,tiempo_promedio,activo')
+          .eq('activo', true)
+          .order('created_at', { ascending: false }),
+      ])
+      if (platformRows) setPlatforms(platformRows.map(row => row.plataforma))
+      if (packageRows) setPackages(packageRows as FollowerPackageRow[])
+      setIsCatalogLoading(false)
     },
-    {
-      id: 'svc-ig-likes',
-      name: 'Instagram likes | Rapido | 0.0320 por 1000',
-      categoryId: 'instagram',
-      pricePerThousand: 0.032,
-      avgTime: '30 minutos',
-      min: 20,
-      max: 500000,
-    },
-    {
-      id: 'svc-yt-views',
-      name: 'Youtube views | Alta retencion | 0.1200 por 1000',
-      categoryId: 'youtube',
-      pricePerThousand: 0.12,
-      avgTime: '1-3 horas',
-      min: 100,
-      max: 2000000,
-    },
-    {
-      id: 'svc-tw-seguidores',
-      name: 'Twitter seguidores | Mixto | 0.0850 por 1000',
-      categoryId: 'twitter',
-      pricePerThousand: 0.085,
-      avgTime: '2-6 horas',
-      min: 50,
-      max: 800000,
-    },
-    {
-      id: 'svc-tiktok-views',
-      name: 'Tiktok views | Instant | 0.0440 por 1000',
-      categoryId: 'tiktok',
-      pricePerThousand: 0.044,
-      avgTime: '15-40 minutos',
-      min: 10,
-      max: 1000000,
-    },
-    {
-      id: 'svc-spotify-plays',
-      name: 'Spotify plays | Global | 0.0980 por 1000',
-      categoryId: 'spotify',
-      pricePerThousand: 0.098,
-      avgTime: '3-6 horas',
-      min: 100,
-      max: 300000,
-    },
-    {
-      id: 'svc-web-traffic',
-      name: 'Website traffic | Mixto | 0.0600 por 1000',
-      categoryId: 'web',
-      pricePerThousand: 0.06,
-      avgTime: '1-2 horas',
-      min: 100,
-      max: 500000,
-    },
-  ]
-
-  const filteredServices = useMemo(() => {
-    return services.filter(service => {
-      const matchesCategory = selectedCategory === 'todo' ? true : service.categoryId === selectedCategory
-      const matchesSearch =
-        searchTerm.trim().length === 0 ||
-        service.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
-      return matchesCategory && matchesSearch
-    })
-  }, [services, selectedCategory, searchTerm])
-
-  useEffect(() => {
-    const first = filteredServices[0]?.id ?? null
-    setSelectedServiceId(first)
-  }, [filteredServices])
-
-  const selectedService = useMemo(
-    () => filteredServices.find(s => s.id === selectedServiceId) ?? filteredServices[0] ?? null,
-    [filteredServices, selectedServiceId]
+    []
   )
 
-  const unitPrice = selectedService?.pricePerThousand ?? 0
-  const total = useMemo(() => Math.max(0, (quantity || 0) / 1000 * unitPrice), [quantity, unitPrice])
+  useEffect(() => {
+    void loadCatalog()
+    const channel = supabase
+      .channel('followers-catalog')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'follower_platforms' }, () => {
+        void loadCatalog()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'follower_packages' }, () => {
+        void loadCatalog()
+      })
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [loadCatalog])
+
+  const filteredPackages = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    return packages.filter(pkg => {
+      const matchesCategory = selectedCategory === 'Todo' ? true : pkg.plataforma === selectedCategory
+      const matchesSearch =
+        term.length === 0 ||
+        `${pkg.plataforma} ${pkg.servicio} ${pkg.categoria}`.toLowerCase().includes(term)
+      return matchesCategory && matchesSearch
+    })
+  }, [packages, searchTerm, selectedCategory])
+
+  useEffect(() => {
+    const first = filteredPackages[0]?.id ?? null
+    setSelectedServiceId(first)
+  }, [filteredPackages])
+
+  const selectedPackage = useMemo(
+    () => filteredPackages.find(pkg => pkg.id === selectedServiceId) ?? filteredPackages[0] ?? null,
+    [filteredPackages, selectedServiceId]
+  )
+
+  const quantity = Math.max(0, Number(quantityInput || 0))
+  const unitPrice = selectedPackage?.precio_por_mil ?? 0
+  const total = useMemo(() => Math.max(0, quantity / 1000 * unitPrice), [quantity, unitPrice])
+
+  const detailsLines = useMemo(() => {
+    const raw = selectedPackage?.detalles || ''
+    return raw
+      .split(/\r?\n|;/)
+      .map(item => item.trim())
+      .filter(Boolean)
+  }, [selectedPackage])
+
+  const notesLines = useMemo(() => {
+    const raw = selectedPackage?.notas || ''
+    return raw
+      .split(/\r?\n|;/)
+      .map(item => item.trim())
+      .filter(Boolean)
+  }, [selectedPackage])
 
   return (
     <main className={styles.page}>
@@ -237,7 +222,7 @@ const categories: Category[] = [
             Productos
           </Link>
           <Link href='/prosegur' className={navClass(pathname === '/prosegur')}>
-            Prosegur
+            Seguidores
           </Link>
           <Link href={accountHref} className={navClass(pathname === '/dashboard', true)}>
             {accountLabel}
@@ -265,7 +250,7 @@ const categories: Category[] = [
             Productos
           </Link>
           <Link href='/prosegur' className={pathname === '/prosegur' ? styles.navActive : ''} onClick={() => setMenuOpen(false)}>
-            Prosegur
+            Seguidores
           </Link>
           <Link
             href={accountHref}
@@ -285,7 +270,7 @@ const categories: Category[] = [
             <p className={styles.userBalanceValue}>{formatBalance(balance)}</p>
           </div>
 
-          <nav className={styles.sideNav} aria-label='Menu Prosegur'>
+        <nav className={styles.sideNav} aria-label='Menu Seguidores'>
             {sideNav.map(item => (
               <button
                 key={item.id}
@@ -318,13 +303,13 @@ const categories: Category[] = [
                   {categories.map(cat => (
                     <button
                       key={cat.id}
-                        type='button'
-                        className={`${styles.chipButton} ${selectedCategory === cat.id ? styles.chipButtonActive : ''}`}
-                        onClick={() => setSelectedCategory(cat.id)}
-                      >
-                        {cat.label}
-                      </button>
-                    ))}
+                      type='button'
+                      className={`${styles.chipButton} ${selectedCategory === cat.label ? styles.chipButtonActive : ''}`}
+                      onClick={() => setSelectedCategory(cat.label)}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
                   </div>
                 </div>
 
@@ -348,7 +333,7 @@ const categories: Category[] = [
                       className={styles.selectControl}
                     >
                       {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>
+                        <option key={cat.id} value={cat.label}>
                           {cat.label}
                         </option>
                       ))}
@@ -360,13 +345,13 @@ const categories: Category[] = [
                   <span>Servicio</span>
                   <div className={styles.selectWrap}>
                     <select
-                      value={selectedService?.id ?? ''}
+                      value={selectedPackage?.id ?? ''}
                       onChange={e => setSelectedServiceId(e.target.value)}
                       className={styles.selectControl}
                     >
-                      {filteredServices.map(service => (
-                        <option key={service.id} value={service.id}>
-                          {service.name}
+                      {filteredPackages.map(pkg => (
+                        <option key={pkg.id} value={pkg.id}>
+                          {`${pkg.plataforma} ${pkg.servicio} | ${pkg.categoria} | S/ ${pkg.precio_por_mil} por 1000`}
                         </option>
                       ))}
                     </select>
@@ -382,19 +367,19 @@ const categories: Category[] = [
                   <span>Cantidad</span>
                   <input
                     type='number'
-                    min={selectedService?.min ?? 1}
-                    max={selectedService?.max ?? 1000000}
-                    value={quantity}
-                    onChange={e => setQuantity(Number(e.target.value))}
+                    min={1}
+                    max={1000000}
+                    value={quantityInput}
+                    onChange={e => setQuantityInput(e.target.value.replace(/^0+(?=\\d)/, ''))}
                   />
                   <small className={styles.helperText}>
-                    Min {selectedService?.min ?? 1} - Max {selectedService?.max ?? 1000000}
+                    Min 1 - Max 1000000
                   </small>
                 </label>
 
               <div className={styles.inputBlock}>
                 <span>Tiempo promedio</span>
-                <div className={styles.readonlyField}>{selectedService?.avgTime ?? 'N/D'}</div>
+                <div className={styles.readonlyField}>{selectedPackage?.tiempo_promedio ?? 'N/D'}</div>
               </div>
 
                 <div className={styles.pricingRow}>
@@ -430,37 +415,25 @@ const categories: Category[] = [
                   </div>
                 </div>
                 <div className={styles.descBody}>
-                  <p className={styles.descLine}>
-                    <span className={styles.bulletBlue}></span> Drop bajo: estabilidad alta, poco riesgo de caida.
-                  </p>
-                  <p className={styles.descLine}>
-                    <span className={styles.bulletYellow}></span> Drop moderado: retencion media, vigila el progreso.
-                  </p>
-                  <p className={styles.descLine}>
-                    <span className={styles.bulletRed}></span> Drop alto: podria perderse rapido, usar con cuidado.
-                  </p>
-                  <p className={styles.descLine}>
-                    <span className={styles.bulletGreen}></span> Refill: se repone si baja el conteo.
-                  </p>
-                  <p className={styles.descLine}>
-                    <span className={styles.bulletGray}></span> Sin refill: no hay reposicion para drops.
-                  </p>
+                  {selectedPackage?.descripcion && <p className={styles.descLine}>{selectedPackage.descripcion}</p>}
 
                   <div className={styles.descBox}>
                     <p className={styles.descLabel}>Detalles</p>
                     <ul className={styles.descList}>
-                      <li>Inicio: 0-20 min</li>
-                      <li>Velocidad: rapida</li>
-                      <li>Formato de enlace: post o perfil publico</li>
+                      {detailsLines.length === 0 && <li>Sin detalles.</li>}
+                      {detailsLines.map(item => (
+                        <li key={item}>{item}</li>
+                      ))}
                     </ul>
                   </div>
 
                   <div className={styles.descBox}>
                     <p className={styles.descLabel}>Notas</p>
                     <ul className={styles.descList}>
-                      <li>Usa enlaces publicos, no privados.</li>
-                      <li>No hagas dos pedidos con el mismo enlace hasta que termine.</li>
-                      <li>Si hay alta demanda, el inicio puede tardar mas.</li>
+                      {notesLines.length === 0 && <li>Sin notas.</li>}
+                      {notesLines.map(item => (
+                        <li key={item}>{item}</li>
+                      ))}
                     </ul>
                   </div>
                 </div>
@@ -529,7 +502,7 @@ const categories: Category[] = [
               <li>Los pedidos no son reembolsables una vez enviados.</li>
               <li>Usa enlaces publicos y evita cuentas privadas para evitar bloqueos.</li>
               <li>El saldo aplicado es instantaneo; guarda el comprobante de pago.</li>
-              <li>Soporte 24/7 via WhatsApp para incidencias con Prosegur.</li>
+              <li>Soporte 24/7 via WhatsApp para incidencias con Seguidores.</li>
             </ul>
           </section>
           </section>
