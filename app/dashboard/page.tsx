@@ -3204,8 +3204,6 @@ export default function UserDashboardPage() {
       // Log del premio
       await supabase.from('prize_logs').insert({ user_id: targetUserId, prize }).select('id').single()
 
-      affiliatePrizeAppliedRef.current = true
-
       // Ticket extra: dispara un premio adicional
       if (effect.extraTicket) {
         affiliatePrizeAppliedRef.current = false
@@ -3216,13 +3214,16 @@ export default function UserDashboardPage() {
         setAffiliatePrize(nextPrize)
         setAffiliatePrizeRevealed(false)
         setShowAffiliatePrize(true)
-        await applyAffiliatePrize(nextPrize)
+        setAffiliateMsg('Ticket extra generado. Raspa y reclama el nuevo premio.')
+        setAffiliateMsgType('ok')
+        return
       }
 
-      // Feedback y cierre
+      affiliatePrizeAppliedRef.current = true
       setAffiliateMsg('Premio reclamado')
       setAffiliateMsgType('ok')
-      closeAffiliatePrize()
+      setShowAffiliatePrize(false)
+      setAffiliatePrizeRevealed(false)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo entregar el premio'
       setAffiliateMsg(message)
@@ -3242,6 +3243,7 @@ export default function UserDashboardPage() {
   const claimAffiliatePrize = () => {
     if (!affiliatePrize) return
     if (!affiliatePrizeRevealed) setAffiliatePrizeRevealed(true)
+    affiliatePrizeAppliedRef.current = false
     void applyAffiliatePrize(affiliatePrize)
   }
 

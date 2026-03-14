@@ -180,7 +180,6 @@ export async function affiliateUserByUsernameAction(params: {
         .from('profiles')
         .update(payload)
         .eq('id', targetId)
-        .is('referred_by', null)
         .is('afiliador', null)
         .select('id')
         .limit(1)
