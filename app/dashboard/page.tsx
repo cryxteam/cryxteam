@@ -190,12 +190,15 @@ type AffiliateRewardLevel = {
 
 const AFFILIATE_PRIZES = [
   '10% de descuento en tu siguiente compra',
-  '1 recarga gratis (hasta S/10)',
+  '1 recarga gratis (hasta S/15)',
   'Envío prioritario en tu próximo pedido',
   'Soporte VIP por 7 días',
-  '2% cashback en tu próxima compra',
+  '5% cashback en tu próxima compra',
   'Sticker pack sorpresa',
+  'Upgrade a entrega express en tu próximo pedido',
 ]
+
+const AFFILIATE_PRIZE_LEGENDARY = '🎖 Premio raro: S/500 en créditos + prioridad 6 meses'
 
 type ProviderProduct = {
   id: number
@@ -1709,6 +1712,8 @@ export default function UserDashboardPage() {
   const [showAffiliatePrize, setShowAffiliatePrize] = useState(false)
   const [affiliatePrize, setAffiliatePrize] = useState<string | null>(null)
   const [affiliatePrizeRevealed, setAffiliatePrizeRevealed] = useState(false)
+  const scratchCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const scratchIsDownRef = useRef(false)
   const [showAffiliateNotFoundModal, setShowAffiliateNotFoundModal] = useState(false)
   const [showAffiliateRulesModal, setShowAffiliateRulesModal] = useState(false)
   const [showAffiliateMembersList, setShowAffiliateMembersList] = useState(true)
@@ -3070,13 +3075,22 @@ export default function UserDashboardPage() {
   const closeAffiliatePrize = () => {
     setShowAffiliatePrize(false)
     setAffiliatePrizeRevealed(false)
+    scratchIsDownRef.current = false
+  }
+
+  const pickAffiliatePrize = () => {
+    const roll = Math.random()
+    const canLegendary = affiliateSummary.approved >= 500
+    if (canLegendary && roll < 0.001) return AFFILIATE_PRIZE_LEGENDARY
+    return AFFILIATE_PRIZES[Math.floor(Math.random() * AFFILIATE_PRIZES.length)]
   }
 
   const triggerAffiliatePrize = () => {
-    const randomPrize = AFFILIATE_PRIZES[Math.floor(Math.random() * AFFILIATE_PRIZES.length)]
+    const randomPrize = pickAffiliatePrize()
     setAffiliatePrize(randomPrize)
     setAffiliatePrizeRevealed(false)
     setShowAffiliatePrize(true)
+    scratchIsDownRef.current = false
   }
 
   function toggleCredentials(orderId: string) {
@@ -3727,7 +3741,7 @@ export default function UserDashboardPage() {
       setAffiliateMsg('Usuario afiliado y aprobado correctamente.')
       setAffiliateUsername('')
       if (userId) void loadAffiliateMembers(userId)
-      const randomPrize = AFFILIATE_PRIZES[Math.floor(Math.random() * AFFILIATE_PRIZES.length)]
+      const randomPrize = pickAffiliatePrize()
       setAffiliatePrize(randomPrize)
       setAffiliatePrizeRevealed(false)
       setShowAffiliatePrize(true)
@@ -8542,6 +8556,65 @@ export default function UserDashboardPage() {
     setOwnerMsgType('idle')
   }, [currentSectionId, ownerMsg, ownerMsgType, showOwnerNotice])
 
+  useEffect(() => {
+    if (!showAffiliatePrize || affiliatePrizeRevealed) return
+    const canvas = scratchCanvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const width = 320
+    const height = 160
+    canvas.width = width
+    canvas.height = height
+    ctx.fillStyle = '#1f2937'
+    ctx.fillRect(0, 0, width, height)
+    ctx.globalCompositeOperation = 'destination-out'
+
+    const erase = (x: number, y: number) => {
+      ctx.beginPath()
+      ctx.arc(x, y, 18, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    const computeCleared = () => {
+      const data = ctx.getImageData(0, 0, width, height).data
+      let cleared = 0
+      for (let i = 3; i < data.length; i += 4) {
+        if (data[i] === 0) cleared++
+      }
+      const percent = cleared / (width * height) * 100
+      if (percent > 55) {
+        setAffiliatePrizeRevealed(true)
+      }
+    }
+
+    const handleDown = (event: PointerEvent) => {
+      scratchIsDownRef.current = true
+      const rect = canvas.getBoundingClientRect()
+      erase(event.clientX - rect.left, event.clientY - rect.top)
+      computeCleared()
+    }
+    const handleMove = (event: PointerEvent) => {
+      if (!scratchIsDownRef.current) return
+      const rect = canvas.getBoundingClientRect()
+      erase(event.clientX - rect.left, event.clientY - rect.top)
+      computeCleared()
+    }
+    const handleUp = () => {
+      scratchIsDownRef.current = false
+    }
+
+    canvas.addEventListener('pointerdown', handleDown)
+    canvas.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+
+    return () => {
+      canvas.removeEventListener('pointerdown', handleDown)
+      canvas.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+    }
+  }, [showAffiliatePrize, affiliatePrizeRevealed])
+
   const section = sectionMeta(currentSectionId)
   const accountLabel = profile ? profile.username : 'Ingresa'
   const isMyProductsSection = currentSectionId === 'mis-productos'
@@ -13255,6 +13328,7 @@ export default function UserDashboardPage() {
                 <span className={styles.scratchPrize}>{affiliatePrize ?? 'Premio sorpresa'}</span>
               )}
               {!affiliatePrizeRevealed && <span className={styles.scratchShimmer} aria-hidden='true' />}
+              {!affiliatePrizeRevealed && <canvas ref={scratchCanvasRef} className={styles.scratchCanvas} />}
             </div>
             <p className={styles.scratchCapture}>Toma captura o no cuenta XD</p>
             <p className={styles.scratchNote}>
@@ -13267,7 +13341,8 @@ export default function UserDashboardPage() {
                 target='_blank'
                 rel='noreferrer'
               >
-                📱 WhatsApp
+                <Image src='/whatsapp.png' alt='WhatsApp' width={20} height={20} className={styles.scratchWhatsIcon} />
+                WhatsApp
               </a>
               <button type='button' className={styles.scratchOk} onClick={closeAffiliatePrize}>
                 Listo

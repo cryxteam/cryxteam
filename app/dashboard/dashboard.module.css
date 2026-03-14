@@ -4928,6 +4928,14 @@
   border-style: solid;
 }
 
+.scratchCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
 .scratchCapture {
   margin: 0;
   color: #e0f2fe;
@@ -4962,12 +4970,21 @@
   background: linear-gradient(120deg, #22c55e, #16a34a);
   color: #052e16;
   border: 1px solid rgba(34, 197, 94, 0.7);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .scratchOk {
   background: rgba(15, 23, 42, 0.8);
   color: #e2e8f0;
   border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+.scratchWhatsIcon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
 }
 
 @keyframes scratchPop {
