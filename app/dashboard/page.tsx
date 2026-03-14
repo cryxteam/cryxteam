@@ -1843,7 +1843,7 @@ export default function UserDashboardPage() {
 
         const { data: userProfile, error: profileError } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id,username,role,is_approved,balance,provider_balance,cashback_rate,cashback_expires_at,purchase_pin,provider_avatar_url,created_at')
           .eq('id', user.id)
           .maybeSingle<ProfileRow>()
 
@@ -2194,14 +2194,16 @@ export default function UserDashboardPage() {
           if (productIds.length > 0) {
             const { data, error } = await supabase
               .from('products')
-              .select('*')
-              .in('id', productIds)
+            .select(
+              'id,name,summary,description,price_guest,price_affiliate,renewal_price,account_type,renewable,delivery_mode,provider_id,created_at,duration_days'
+            )
+            .in('id', productIds)
 
             if (!mounted) return
             if (error) {
               errors.push('No se pudo cargar la data de productos.')
             } else {
-              productRows = (data ?? []) as ProductRow[]
+              productRows = (data ?? []) as unknown as ProductRow[]
             }
           }
 
@@ -2287,7 +2289,7 @@ export default function UserDashboardPage() {
             if (providerNeedsFallbackIds.length > 0) {
               const { data: fallbackRows, error: fallbackError } = await supabase
                 .from('profiles')
-                .select('*')
+                .select('id,username,provider_avatar_url,phone_e164,phone')
                 .in('id', providerNeedsFallbackIds)
 
               if (!mounted) return
@@ -2728,7 +2730,7 @@ export default function UserDashboardPage() {
       for (const source of AFFILIATE_LINK_QUERIES) {
         const { data, error } = await supabase
           .from(source.table)
-          .select('*')
+          .select(source.referredColumns.map(col => `${col}`).join(','))
           .eq(source.filterColumn, currentUserId)
           .order('created_at', { ascending: false })
           .limit(250)
@@ -2741,7 +2743,7 @@ export default function UserDashboardPage() {
 
         hasReadableSource = true
 
-        for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+        for (const row of ((data ?? []) as unknown as Array<Record<string, unknown>>)) {
           const linkedUserId = pickRowText(row, source.referredColumns)
           if (!linkedUserId || linkedUserId === currentUserId) continue
 
@@ -2907,7 +2909,7 @@ export default function UserDashboardPage() {
         void (async () => {
           const { data, error } = await supabase
             .from('profiles')
-            .select('*')
+            .select('id,username,role,is_approved,balance,provider_balance,cashback_rate,cashback_expires_at,purchase_pin,provider_avatar_url,created_at')
             .eq('id', userId)
             .maybeSingle<ProfileRow>()
           if (error || !data) return
@@ -3115,7 +3117,9 @@ export default function UserDashboardPage() {
 
     const { data: providerRow, error: providerError } = await supabase
       .from('profiles')
-      .select('*')
+      .select(
+        'id,username,role,balance,provider_balance,provider_wallet_balance,provider_wallet,provider_saldo,saldo_provider,saldo_proveedor,proveedor_balance,balance_provider'
+      )
       .eq('id', product.provider_id)
       .maybeSingle()
     if (providerError) throw providerError
@@ -3123,7 +3127,7 @@ export default function UserDashboardPage() {
     const providerBalanceColumn =
       PROVIDER_BALANCE_KEYS.find(key => Object.prototype.hasOwnProperty.call(providerRow ?? {}, key)) ??
       'provider_balance'
-    const providerBalanceCurrent = Math.max(0, toNumber(providerRow?.[providerBalanceColumn], 0))
+    const providerBalanceCurrent = Math.max(0, toNumber((providerRow as Record<string, unknown>)?.[providerBalanceColumn], 0))
     const commission = 0.5
     const providerCredit = Math.max(0, price - commission)
     const nextProviderBalance = Number((providerBalanceCurrent + providerCredit).toFixed(2))
@@ -3403,7 +3407,7 @@ export default function UserDashboardPage() {
 
       const { data: productData, error: productError } = await supabase
         .from('products')
-        .select('*')
+        .select('id,provider_id,account_type,renewable,duration_days,price_paid:price_guest,price_affiliate,renewal_price')
         .eq('id', productId)
         .maybeSingle()
       if (productError) throw new Error(productError.message)
@@ -3445,7 +3449,7 @@ export default function UserDashboardPage() {
       if (providerCredit > 0) {
         const { data: providerProfileData, error: providerReadError } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id,username,role,balance,provider_balance,provider_wallet_balance,provider_wallet,provider_saldo,saldo_provider,saldo_proveedor,proveedor_balance,balance_provider')
           .eq('id', providerId)
           .maybeSingle()
         if (providerReadError) throw new Error(providerReadError.message)
@@ -4391,15 +4395,37 @@ export default function UserDashboardPage() {
     setProviderMsgType('idle')
 
     try {
-      let productsQuery = supabase.from('products').select('*').order('created_at', { ascending: false }).limit(350)
-      let ticketsQuery = supabase.from('tickets').select('*').order('created_at', { ascending: false }).limit(350)
-      let ordersQuery = supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(1200)
-      let accountsQuery = supabase.from('inventory_accounts').select('*').limit(4000)
-      let slotsQuery = supabase.from('inventory_slots').select('*').limit(8000)
-      const profileBalanceQuery = supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
+      let productsQuery = supabase
+        .from('products')
+        .select('id,name,provider_id,price_guest,price_affiliate,renewal_price,account_type,renewable,is_active,created_at')
+        .order('created_at', { ascending: false })
+        .limit(300)
+      let ticketsQuery = supabase
+        .from('tickets')
+        .select('id,status,type,buyer_id,provider_id,product_id,created_at,updated_at')
+        .order('created_at', { ascending: false })
+        .limit(300)
+      let ordersQuery = supabase
+        .from('orders')
+        .select('id,buyer_id,provider_id,product_id,status,price_paid,created_at,paid_at,delivered_at,duration_days,expires_at')
+        .order('created_at', { ascending: false })
+        .limit(500)
+      let accountsQuery = supabase
+        .from('inventory_accounts')
+        .select('id,provider_id,login_user,login_password,is_active,created_at')
+        .limit(800)
+      let slotsQuery = supabase
+        .from('inventory_slots')
+        .select('id,inventory_account_id,product_id,buyer_id,slot_label,slot_index,created_at')
+        .limit(1200)
+      const profileBalanceQuery = supabase
+        .from('profiles')
+        .select('id,balance,cashback_rate,cashback_expires_at,role,is_approved,provider_balance')
+        .eq('id', userId)
+        .maybeSingle()
       const providerLimitQuery = supabase
         .from('provider_limits')
-        .select('*')
+        .select('id,provider_id,max_products,max_accounts,max_slots,updated_at')
         .eq('provider_id', userId)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -4460,7 +4486,7 @@ export default function UserDashboardPage() {
       } else if (!providerLimitResult.error) {
         const providerLimitByUser = await supabase
           .from('provider_limits')
-          .select('*')
+          .select('id,user_id,provider_id,max_products,max_accounts,max_slots,updated_at')
           .eq('user_id', userId)
           .order('updated_at', { ascending: false })
           .limit(1)
@@ -4617,7 +4643,10 @@ export default function UserDashboardPage() {
       const buyerNameById = new Map<string, string>()
       const buyerPhoneById = new Map<string, string>()
       if (buyerIds.length > 0) {
-        const { data: buyerRows } = await supabase.from('profiles').select('*').in('id', buyerIds)
+        const { data: buyerRows } = await supabase
+          .from('profiles')
+          .select('id,username,phone_e164,phone,phone_number,whatsapp,created_at')
+          .in('id', buyerIds)
         for (const row of (buyerRows ?? []) as Array<Record<string, unknown>>) {
           const buyerId = toText(row.id)
           if (!buyerId) continue
@@ -5094,12 +5123,12 @@ export default function UserDashboardPage() {
 
       let accountsQuery = supabase
         .from('inventory_accounts')
-        .select('*')
+        .select('id,provider_id,product_id,login_user,login_password,is_active,created_at')
         .eq('product_id', product.id)
         .order('created_at', { ascending: false })
       let slotsQuery = supabase
         .from('inventory_slots')
-        .select('*')
+        .select('id,inventory_account_id,product_id,provider_id,buyer_id,slot_label,slot_index,created_at')
         .eq('product_id', product.id)
         .order('slot_index', { ascending: true })
 
@@ -5166,7 +5195,10 @@ export default function UserDashboardPage() {
       const buyerNameById = new Map<string, string>()
       const buyerPhoneById = new Map<string, string>()
       if (buyerIds.length > 0) {
-        const { data: buyerRows } = await supabase.from('profiles').select('*').in('id', buyerIds)
+        const { data: buyerRows } = await supabase
+          .from('profiles')
+          .select('id,username,phone_e164,phone,phone_number,whatsapp,created_at')
+          .in('id', buyerIds)
         for (const row of (buyerRows ?? []) as Array<Record<string, unknown>>) {
           const buyerId = toText(row.id)
           if (!buyerId) continue
@@ -6199,7 +6231,7 @@ export default function UserDashboardPage() {
 
       const limitByProvider = await supabase
         .from('provider_limits')
-        .select('*')
+        .select('id,provider_id,max_products,max_accounts,max_slots,updated_at')
         .eq('provider_id', userId)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -6217,7 +6249,7 @@ export default function UserDashboardPage() {
       } else if (!limitByProvider.error || isLikelySchemaError(limitByProvider.error?.message ?? '')) {
         const limitByUser = await supabase
           .from('provider_limits')
-          .select('*')
+          .select('id,user_id,provider_id,max_products,max_accounts,max_slots,updated_at')
           .eq('user_id', userId)
           .order('updated_at', { ascending: false })
           .limit(1)
@@ -6912,14 +6944,30 @@ export default function UserDashboardPage() {
     setOwnerMsg('')
     setOwnerMsgType('idle')
 
-    try {
-      const [profilesResult, productsResult, ordersResult, ticketsResult, providerLimitsResult] = await Promise.all([
-        supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(2000),
-        supabase.from('products').select('*').order('created_at', { ascending: false }).limit(2000),
-        supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(3500),
-        supabase.from('tickets').select('*').order('created_at', { ascending: false }).limit(3500),
-        supabase.from('provider_limits').select('*').limit(3000),
-      ])
+      try {
+        const [profilesResult, productsResult, ordersResult, ticketsResult, providerLimitsResult] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('id,username,role,is_approved,balance,provider_balance,cashback_rate,cashback_expires_at,created_at')
+            .order('created_at', { ascending: false })
+            .limit(500),
+          supabase
+            .from('products')
+            .select('id,name,provider_id,price_guest,price_affiliate,renewal_price,account_type,renewable,is_active,created_at')
+            .order('created_at', { ascending: false })
+            .limit(500),
+          supabase
+            .from('orders')
+            .select('id,buyer_id,provider_id,product_id,status,price_paid,created_at,paid_at,delivered_at,duration_days,expires_at')
+            .order('created_at', { ascending: false })
+            .limit(800),
+          supabase
+            .from('tickets')
+            .select('id,status,type,buyer_id,provider_id,product_id,created_at,updated_at')
+            .order('created_at', { ascending: false })
+            .limit(800),
+          supabase.from('provider_limits').select('id,provider_id,max_products,max_accounts,max_slots,updated_at').limit(500),
+        ])
 
       if (profilesResult.error) {
         setOwnerUsers([])
@@ -7252,9 +7300,9 @@ export default function UserDashboardPage() {
       for (const source of AFFILIATE_LINK_QUERIES) {
         const { data, error } = await supabase
           .from(source.table)
-          .select('*')
+          .select(source.referredColumns.map(col => `${col},created_at`).join(','))
           .order('created_at', { ascending: false })
-          .limit(1600)
+          .limit(800)
 
         if (error) {
           if (isLikelySchemaError(error.message)) continue
@@ -7262,7 +7310,7 @@ export default function UserDashboardPage() {
           continue
         }
 
-        for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+        for (const row of ((data ?? []) as unknown as Array<Record<string, unknown>>)) {
           const referrerId = pickRowText(row, [
             source.filterColumn,
             'referrer_user_id',
@@ -7546,7 +7594,7 @@ export default function UserDashboardPage() {
     try {
       const { data, error } = await supabase
         .from('product_name_filters')
-        .select('*')
+        .select('id,name,pattern,sort_order,is_active,created_at,updated_at')
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true })
 

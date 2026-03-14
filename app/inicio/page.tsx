@@ -310,8 +310,11 @@ export default function InicioPage() {
         const loadProducts = async () => {
           const { data: rowsRaw, error } = await supabase
             .from('products')
-            .select('*')
+            .select(
+              'id,name,summary,logo,provider_id,price_guest,price_affiliate,renewal_price,account_type,renewable,is_active,created_at'
+            )
             .order('created_at', { ascending: false })
+            .limit(120)
 
           if (!mounted) return
 

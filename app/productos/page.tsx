@@ -718,8 +718,11 @@ export default function ProductsPage() {
         const loadProducts = async () => {
           const { data: rowsRaw, error } = await supabase
             .from('products')
-            .select('*')
+            .select(
+              'id,name,summary,terms_and_conditions,logo,provider_id,price_guest,price_affiliate,renewal_price,account_type,renewable,duration_days,profiles_per_account,delivery_mode,is_active,created_at'
+            )
             .order('created_at', { ascending: false })
+            .limit(400)
 
           if (!mounted) return
 
