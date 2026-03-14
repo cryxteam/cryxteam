@@ -10,11 +10,14 @@ import { affiliateUserByUsernameAction } from '@/lib/affiliate'
 import styles from './dashboard.module.css'
 
 type ProfileRow = {
+  id?: string
   username: string
   role: string
   is_approved: boolean
   balance: number
   purchase_pin: string | null
+  cashback_rate?: number | null
+  cashback_expires_at?: string | null
   provider_avatar_url?: string | null
   created_at: string | null
 }
@@ -3149,7 +3152,8 @@ export default function UserDashboardPage() {
       affiliatePrizeAppliedRef.current = true
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo entregar el premio'
-      appendMsg(message)
+      setAffiliateMsg(message)
+      setAffiliateMsgType('error')
     }
   }
 
