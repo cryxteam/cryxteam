@@ -13036,48 +13036,50 @@ export default function UserDashboardPage() {
               <div className={styles.imageEditorLayout}>
               <div className={styles.imageEditorPreview}>
                 <div className={styles.imageEditorCardPreview}>
-                  <div className={styles.imageEditorBadgeRow}>
-                    {providerProductForm.termsAndConditions.trim() && (
-                      <span className={styles.imageEditorPill}>Términos</span>
-                    )}
-                    <span
-                      className={`${styles.imageEditorPill} ${
-                        providerProductForm.renewable ? styles.imageEditorPillSuccess : styles.imageEditorPillWarning
-                      }`}
+                  <div className={styles.imageEditorStageWrap}>
+                    <div className={styles.imageEditorBadgeRow}>
+                      {providerProductForm.termsAndConditions.trim() && (
+                        <span className={styles.imageEditorPill}>Términos</span>
+                      )}
+                      <span
+                        className={`${styles.imageEditorPill} ${
+                          providerProductForm.renewable ? styles.imageEditorPillSuccess : styles.imageEditorPillWarning
+                        }`}
+                      >
+                        {providerProductForm.renewable ? 'Renovable' : 'No renovable'}
+                      </span>
+                    </div>
+
+                    <div
+                      className={styles.imageEditorStage}
+                      ref={imageEditorStageRef}
+                      onPointerDown={handleEditorPointerDown}
+                      onPointerMove={handleEditorPointerMove}
+                      onPointerUp={handleEditorPointerUp}
+                      onPointerCancel={handleEditorPointerUp}
+                      onWheel={handleEditorWheel}
                     >
-                      {providerProductForm.renewable ? 'Renovable' : 'No renovable'}
-                    </span>
-                  </div>
+                      {imageEditorSrc && (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={imageEditorSrc}
+                            alt='Previsualizacion'
+                            style={{
+                              transform: `translate(${imageEditorOffsetX * 50}%, ${imageEditorOffsetY * 50}%) scale(${imageEditorScale})`,
+                            }}
+                          />
+                          <div className={styles.imageEditorFrame} aria-hidden />
+                        </>
+                      )}
+                    </div>
 
-                  <div
-                    className={styles.imageEditorStage}
-                    ref={imageEditorStageRef}
-                    onPointerDown={handleEditorPointerDown}
-                    onPointerMove={handleEditorPointerMove}
-                    onPointerUp={handleEditorPointerUp}
-                    onPointerCancel={handleEditorPointerUp}
-                    onWheel={handleEditorWheel}
-                  >
-                    {imageEditorSrc && (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={imageEditorSrc}
-                          alt='Previsualizacion'
-                          style={{
-                            transform: `translate(${imageEditorOffsetX * 50}%, ${imageEditorOffsetY * 50}%) scale(${imageEditorScale})`,
-                          }}
-                        />
-                        <div className={styles.imageEditorFrame} aria-hidden />
-                      </>
-                    )}
-                  </div>
-
-                  <div className={styles.imageEditorBottomRow}>
-                    <span className={styles.imageEditorStock}>
-                      {(providerInventoryAccounts?.length || 2) + ' con stock'}
-                    </span>
-                    <span className={styles.imageEditorPrice}>S/ {providerProductForm.priceGuest || '0.00'}</span>
+                    <div className={styles.imageEditorBottomRow}>
+                      <span className={styles.imageEditorStock}>
+                        {(providerInventoryAccounts?.length || 2) + ' con stock'}
+                      </span>
+                      <span className={styles.imageEditorPrice}>S/ {providerProductForm.priceGuest || '0.00'}</span>
+                    </div>
                   </div>
 
                   <div className={styles.imageEditorMeta}>
