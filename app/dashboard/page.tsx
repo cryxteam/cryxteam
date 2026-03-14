@@ -13082,22 +13082,33 @@ export default function UserDashboardPage() {
                     </div>
                   </div>
 
-                  <div className={styles.imageEditorMeta}>
-                    <div className={styles.imageEditorProvider}>
+                  <div className={styles.imageEditorMetaCard}>
+                    <div className={styles.imageEditorProviderRow}>
                       <div className={styles.imageEditorAvatar}>{(profile?.username || 'P')[0]?.toUpperCase()}</div>
-                      <div>
+                      <div className={styles.imageEditorProviderText}>
                         <strong>{profile?.username || 'Proveedor'}</strong>
-                        <small>Cuenta completa | {providerProductForm.renewable ? 'Renovable' : 'No renovable'}</small>
+                        <span className={styles.imageEditorCheck}>✓</span>
                       </div>
                     </div>
-                    <div className={styles.imageEditorTitle}>{providerProductForm.name || 'Producto'}</div>
-                    <div className={styles.imageEditorBadgesLine}>
-                      <span className={styles.imageEditorTinyPill}>Inmediata</span>
-                      {providerProductForm.accountType === 'profiles' && (
-                        <span className={styles.imageEditorTinyPill}>
-                          {providerProductForm.profilesPerAccount || '5'} perfiles
-                        </span>
-                      )}
+
+                    <div className={styles.imageEditorTitleRow}>
+                      <span className={styles.imageEditorTitleText}>
+                        {providerProductForm.name || 'Producto · Nombre'}
+                      </span>
+                    </div>
+
+                    <div className={styles.imageEditorMetaLine}>
+                      <span>{providerProductForm.accountType === 'profiles' ? 'Perfil' : 'Cuenta completa'}</span>
+                      <span>{providerProductForm.deliveryMode === 'request' ? 'A pedido' : 'Inmediata'}</span>
+                      <span>{providerProductForm.renewable ? 'Renovable' : 'No renovable'}</span>
+                      <span>{providerProductForm.durationDays ? `${providerProductForm.durationDays} días` : 'Sin límite'}</span>
+                    </div>
+
+                    <div className={styles.imageEditorPriceRow}>
+                      <span className={styles.imageEditorPriceBig}>S/ {providerProductForm.priceGuest || '0.00'}</span>
+                      <button type='button' className={styles.imageEditorCTA}>
+                        {providerProductForm.deliveryMode === 'request' ? 'Solicitar a pedido' : 'Comprar ahora'}
+                      </button>
                     </div>
                   </div>
                 </div>
