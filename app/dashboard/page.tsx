@@ -1127,16 +1127,16 @@ function buildWhatsappUrl(phone: string, lines: string[]) {
 }
 
 const WA_EMOJI = {
-  check: String.fromCodePoint(0x2705),
-  handshake: String.fromCodePoint(0x1f91d),
-  sparkles: String.fromCodePoint(0x2728),
-  movie: String.fromCodePoint(0x1f3ac),
-  mail: String.fromCodePoint(0x1f4e9),
-  lock: String.fromCodePoint(0x1f510),
-  profile: String.fromCodePoint(0x1f464),
-  pin: String.fromCodePoint(0x1f522),
-  hands: String.fromCodePoint(0x1f64c),
-  hourglass: String.fromCodePoint(0x23f3),
+  check: '\u2705\uFE0F',
+  handshake: '\uD83E\uDD1D',
+  sparkles: '\u2728\uFE0F',
+  movie: '\uD83C\uDFAC',
+  mail: '\uD83D\uDCE9',
+  lock: '\uD83D\uDD10',
+  profile: '\uD83D\uDC64',
+  pin: '\uD83D\uDD22',
+  hands: '\uD83D\uDE4C',
+  hourglass: '\u23F3\uFE0F',
 }
 
 function normalizeCredentialKey(value: string) {
