@@ -446,6 +446,9 @@ export default function InicioPage() {
           <Link href='/productos' className={navClass(pathname === '/productos')}>
             Productos
           </Link>
+          <Link href='/prosegur' className={navClass(pathname === '/prosegur')}>
+            Prosegur
+          </Link>
           <Link href={accountHref} className={navClass(pathname === '/dashboard', true)}>
             {accountLabel}
           </Link>
@@ -493,6 +496,13 @@ export default function InicioPage() {
             onClick={() => setMenuOpen(false)}
           >
             Productos
+          </Link>
+          <Link
+            href='/prosegur'
+            className={pathname === '/prosegur' ? styles.navActive : ''}
+            onClick={() => setMenuOpen(false)}
+          >
+            Prosegur
           </Link>
           <Link
             href={accountHref}

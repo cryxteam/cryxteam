@@ -73,6 +73,8 @@ export default function Home() {
 
         <nav className={styles.navLinks}>
           <Link href="/inicio">Inicio</Link>
+          <Link href="/productos">Productos</Link>
+          <Link href="/prosegur">Prosegur</Link>
           <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
             Comunidad
           </a>
@@ -95,6 +97,12 @@ export default function Home() {
         <div className={styles.mobileMenu}>
           <Link href="/inicio" onClick={() => setOpenMenu(false)}>
             Inicio
+          </Link>
+          <Link href="/productos" onClick={() => setOpenMenu(false)}>
+            Productos
+          </Link>
+          <Link href="/prosegur" onClick={() => setOpenMenu(false)}>
+            Prosegur
           </Link>
           <a
             href={WHATSAPP_LINK}

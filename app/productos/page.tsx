@@ -1456,6 +1456,9 @@ export default function ProductsPage() {
           <Link href='/productos' className={navClass(pathname === '/productos')}>
             Productos
           </Link>
+          <Link href='/prosegur' className={navClass(pathname === '/prosegur')}>
+            Prosegur
+          </Link>
           <Link href={accountHref} className={navClass(pathname === '/dashboard', true)}>
             {accountLabel}
           </Link>
@@ -1495,6 +1498,13 @@ export default function ProductsPage() {
           </Link>
           <Link href='/productos' className={pathname === '/productos' ? styles.navActive : ''} onClick={() => setMenuOpen(false)}>
             Productos
+          </Link>
+          <Link
+            href='/prosegur'
+            className={pathname === '/prosegur' ? styles.navActive : ''}
+            onClick={() => setMenuOpen(false)}
+          >
+            Prosegur
           </Link>
           <Link
             href={accountHref}

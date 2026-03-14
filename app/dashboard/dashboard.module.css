@@ -1629,6 +1629,29 @@
   color: #f8fafc;
 }
 
+.providerFollowersCard {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: linear-gradient(135deg, rgba(18, 24, 40, 0.95), rgba(10, 14, 26, 0.95));
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
+}
+
+.providerFollowersHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.providerFollowersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
 .providerCreateBlock {
   gap: 12px;
 }

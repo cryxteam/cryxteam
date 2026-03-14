@@ -1758,7 +1758,16 @@ export default function UserDashboardPage() {
   const [isProviderInventoryEditingSaving, setIsProviderInventoryEditingSaving] = useState(false)
   const [isProviderInventoryDeleting, setIsProviderInventoryDeleting] = useState<Record<string, boolean>>({})
   const [providerBuyerModal, setProviderBuyerModal] = useState<ProviderBuyerModalState | null>(null)
-  const [providerProductForm, setProviderProductForm] = useState<ProviderFormState>(PROVIDER_FORM_DEFAULT)
+const [providerProductForm, setProviderProductForm] = useState<ProviderFormState>(PROVIDER_FORM_DEFAULT)
+const [followersForm, setFollowersForm] = useState({
+  categoria: 'Seguidores',
+  plataforma: 'Instagram',
+  descripcion: '',
+  detalles: '',
+  notas: '',
+  precioPorMil: '',
+  tiempoPromedio: '',
+})
   const [providerOrderDrafts, setProviderOrderDrafts] = useState<Record<string, ProviderOrderDraft>>({})
   const [providerOrderSaving, setProviderOrderSaving] = useState<Record<string, boolean>>({})
   const [providerTicketDrafts, setProviderTicketDrafts] = useState<Record<string, ProviderTicketDraft>>({})
@@ -3964,6 +3973,7 @@ export default function UserDashboardPage() {
   const isAdmin = normalizedRole === 'admin'
   const isOwnerOrAdmin = isOwner || isAdmin
   const isProvider = normalizedRole === 'provider'
+  const isVyron = (normalizeDisplayName(profile?.username) || '').toLowerCase() === 'vyron'
   const canSeeProvider = isProvider || isOwner
   const canSeeAdminAccounts = isOwnerOrAdmin
   const providerDisplayName = normalizeDisplayName(profile?.username) || 'Proveedor'
@@ -9339,6 +9349,100 @@ export default function UserDashboardPage() {
                   Limite de productos: <strong>{providerProducts.length}</strong> /{' '}
                   <strong>{providerProductLimit}</strong>
                 </p>
+              )}
+
+              {isVyron && (
+                <section className={styles.providerFollowersCard}>
+                  <div className={styles.providerFollowersHead}>
+                    <div>
+                      <p className={styles.sectionEyebrow}>Seguidores</p>
+                      <h3 className={styles.sectionTitle}>Configura paquetes de followers</h3>
+                      <p className={styles.sectionLead}>Solo visible para Vyron. Ajusta categorias, precios y mensajes.</p>
+                    </div>
+                  </div>
+
+                  <div className={styles.providerFollowersGrid}>
+                    <label className={styles.inputBlock}>
+                      <span>Categoria</span>
+                      <select
+                        value={followersForm.categoria}
+                        onChange={e => setFollowersForm(form => ({ ...form, categoria: e.target.value }))}
+                      >
+                        <option>Seguidores</option>
+                        <option>Likes</option>
+                        <option>Vistas</option>
+                        <option>Comentarios</option>
+                      </select>
+                    </label>
+
+                    <label className={styles.inputBlock}>
+                      <span>Plataforma</span>
+                      <select
+                        value={followersForm.plataforma}
+                        onChange={e => setFollowersForm(form => ({ ...form, plataforma: e.target.value }))}
+                      >
+                        <option>Instagram</option>
+                        <option>TikTok</option>
+                        <option>Facebook</option>
+                        <option>YouTube</option>
+                      </select>
+                    </label>
+
+                    <label className={styles.inputBlock}>
+                      <span>Precio x 1000</span>
+                      <input
+                        type='number'
+                        min='0'
+                        step='0.001'
+                        value={followersForm.precioPorMil}
+                        onChange={e => setFollowersForm(form => ({ ...form, precioPorMil: e.target.value }))}
+                        placeholder='0.055'
+                      />
+                    </label>
+
+                    <label className={styles.inputBlock}>
+                      <span>Tiempo promedio</span>
+                      <input
+                        type='text'
+                        value={followersForm.tiempoPromedio}
+                        onChange={e => setFollowersForm(form => ({ ...form, tiempoPromedio: e.target.value }))}
+                        placeholder='Inicio 0-20 min, entrega 10K/dia'
+                      />
+                    </label>
+                  </div>
+
+                  <label className={styles.inputBlock}>
+                    <span>Descripcion</span>
+                    <textarea
+                      rows={2}
+                      value={followersForm.descripcion}
+                      onChange={e => setFollowersForm(form => ({ ...form, descripcion: e.target.value }))}
+                      placeholder='Drop bajo, perfiles HQ, retencion alta...'
+                    />
+                  </label>
+
+                  <label className={styles.inputBlock}>
+                    <span>Detalles</span>
+                    <textarea
+                      rows={2}
+                      value={followersForm.detalles}
+                      onChange={e => setFollowersForm(form => ({ ...form, detalles: e.target.value }))}
+                      placeholder='Formato de enlace, ubicacion, velocidad...'
+                    />
+                  </label>
+
+                  <label className={styles.inputBlock}>
+                    <span>Notas</span>
+                    <textarea
+                      rows={2}
+                      value={followersForm.notas}
+                      onChange={e => setFollowersForm(form => ({ ...form, notas: e.target.value }))}
+                      placeholder='No repetir enlace hasta terminar, soporte 24/7, etc.'
+                    />
+                  </label>
+
+                  <p className={styles.helperText}>(Solo UI por ahora; conecta a Supabase cuando definamos la tabla).</p>
+                </section>
               )}
               {!isOwner && providerLimitUnknown && (
                 <p className={styles.providerLimitInfo}>
