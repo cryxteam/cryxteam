@@ -1768,11 +1768,11 @@ const [followersForm, setFollowersForm] = useState({
   precioPorMil: '',
   tiempoPromedio: '',
 })
-const [followerPackages, setFollowerPackages] = useState<
-  {
-    id: string
-    categoria: string
-    plataforma: string
+  const [followerPackages, setFollowerPackages] = useState<
+    {
+      id: string
+      categoria: string
+      plataforma: string
     descripcion: string | null
     detalles: string | null
     notas: string | null
@@ -3987,7 +3987,22 @@ const [isSavingFollower, setIsSavingFollower] = useState(false)
   const isOwnerOrAdmin = isOwner || isAdmin
   const isProvider = normalizedRole === 'provider'
   const isVyron = (normalizeDisplayName(profile?.username) || '').toLowerCase() === 'vyron'
-  const providerId = profile?.id ?? user?.id ?? ''
+  const providerId = profile?.id ?? userId ?? ''
+  useEffect(() => {
+    if (!isProvider || !providerId) return
+    let active = true
+    void (async () => {
+      const { data: pkgRows } = await supabase
+        .from('follower_packages')
+        .select('id,categoria,plataforma,descripcion,detalles,notas,precio_por_mil,tiempo_promedio')
+        .eq('provider_id', providerId)
+        .order('created_at', { ascending: false })
+      if (active && pkgRows) setFollowerPackages(pkgRows)
+    })()
+    return () => {
+      active = false
+    }
+  }, [isProvider, providerId])
   const canSeeProvider = isProvider || isOwner
   const canSeeAdminAccounts = isOwnerOrAdmin
   const providerDisplayName = normalizeDisplayName(profile?.username) || 'Proveedor'
