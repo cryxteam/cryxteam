@@ -188,6 +188,15 @@ type AffiliateRewardLevel = {
   note: string
 }
 
+const AFFILIATE_PRIZES = [
+  '10% de descuento en tu siguiente compra',
+  '1 recarga gratis (hasta S/10)',
+  'Envío prioritario en tu próximo pedido',
+  'Soporte VIP por 7 días',
+  '2% cashback en tu próxima compra',
+  'Sticker pack sorpresa',
+]
+
 type ProviderProduct = {
   id: number
   providerId: string
@@ -1697,6 +1706,9 @@ export default function UserDashboardPage() {
   const [affiliateMsg, setAffiliateMsg] = useState('')
   const [affiliateMsgType, setAffiliateMsgType] = useState<InlineMessageType>('idle')
   const [isAffiliateSubmitting, setIsAffiliateSubmitting] = useState(false)
+  const [showAffiliatePrize, setShowAffiliatePrize] = useState(false)
+  const [affiliatePrize, setAffiliatePrize] = useState<string | null>(null)
+  const [affiliatePrizeRevealed, setAffiliatePrizeRevealed] = useState(false)
   const [showAffiliateNotFoundModal, setShowAffiliateNotFoundModal] = useState(false)
   const [showAffiliateRulesModal, setShowAffiliateRulesModal] = useState(false)
   const [showAffiliateMembersList, setShowAffiliateMembersList] = useState(true)
@@ -3055,6 +3067,18 @@ export default function UserDashboardPage() {
     router.push('/login')
   }
 
+  const closeAffiliatePrize = () => {
+    setShowAffiliatePrize(false)
+    setAffiliatePrizeRevealed(false)
+  }
+
+  const triggerAffiliatePrize = () => {
+    const randomPrize = AFFILIATE_PRIZES[Math.floor(Math.random() * AFFILIATE_PRIZES.length)]
+    setAffiliatePrize(randomPrize)
+    setAffiliatePrizeRevealed(false)
+    setShowAffiliatePrize(true)
+  }
+
   function toggleCredentials(orderId: string) {
     setVisibleCredentials(previous => ({ ...previous, [orderId]: !previous[orderId] }))
   }
@@ -3703,6 +3727,10 @@ export default function UserDashboardPage() {
       setAffiliateMsg('Usuario afiliado y aprobado correctamente.')
       setAffiliateUsername('')
       if (userId) void loadAffiliateMembers(userId)
+      const randomPrize = AFFILIATE_PRIZES[Math.floor(Math.random() * AFFILIATE_PRIZES.length)]
+      setAffiliatePrize(randomPrize)
+      setAffiliatePrizeRevealed(false)
+      setShowAffiliatePrize(true)
       setIsAffiliateSubmitting(false)
       return
     }
@@ -8723,6 +8751,13 @@ export default function UserDashboardPage() {
                   </div>
 
                   <article className={`${styles.affiliatePanel} ${styles.affiliatePanelPro} ${styles.affiliatePanelTop}`}>
+                    {isOwner && (
+                      <div className={styles.affiliateScratchRow}>
+                        <button type='button' className={styles.affiliateScratchBtn} onClick={triggerAffiliatePrize}>
+                          ✨ Invocar rasca y gana
+                        </button>
+                      </div>
+                    )}
                     <label htmlFor='affiliate-username' className={styles.affiliateLabel}>
                       🔎 Ingresa el nombre del usuario al que quieras afiliar
                     </label>
@@ -13194,6 +13229,51 @@ export default function UserDashboardPage() {
             <p className={styles.supportMaintenanceText}>Estamos ajustando este modulo</p>
             <p className={styles.supportMaintenanceSubtext}>Vuelve pronto...</p>
           </article>
+        </div>
+      )}
+
+      {showAffiliatePrize && (
+        <div className={styles.scratchBackdrop} role='dialog' aria-modal='true'>
+          <div className={styles.scratchCard}>
+            <button type='button' className={styles.scratchClose} onClick={closeAffiliatePrize} aria-label='Cerrar rasca y gana'>
+              ×
+            </button>
+            <p className={styles.scratchKicker}>🎉 Rasca y gana</p>
+            <h4 className={styles.scratchTitle}>¡Premio aleatorio desbloqueado!</h4>
+            <div
+              className={`${styles.scratchArea} ${affiliatePrizeRevealed ? styles.scratchAreaOpen : ''}`}
+              onClick={() => setAffiliatePrizeRevealed(true)}
+              role='button'
+              tabIndex={0}
+              onKeyDown={event => {
+                if (event.key === 'Enter' || event.key === ' ') setAffiliatePrizeRevealed(true)
+              }}
+            >
+              {!affiliatePrizeRevealed ? (
+                <span className={styles.scratchHint}>Raspa aquí</span>
+              ) : (
+                <span className={styles.scratchPrize}>{affiliatePrize ?? 'Premio sorpresa'}</span>
+              )}
+              {!affiliatePrizeRevealed && <span className={styles.scratchShimmer} aria-hidden='true' />}
+            </div>
+            <p className={styles.scratchCapture}>Toma captura o no cuenta XD</p>
+            <p className={styles.scratchNote}>
+              📱 WhatsApp: “Hola vengo a reclamar mi premio 😁”
+            </p>
+            <div className={styles.scratchActions}>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent('Hola vengo a reclamar mi premio 😁')}`}
+                className={styles.scratchWhats}
+                target='_blank'
+                rel='noreferrer'
+              >
+                📱 WhatsApp
+              </a>
+              <button type='button' className={styles.scratchOk} onClick={closeAffiliatePrize}>
+                Listo
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>

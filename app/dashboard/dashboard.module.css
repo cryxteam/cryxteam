@@ -4098,6 +4098,30 @@
   cursor: not-allowed;
 }
 
+.affiliateScratchRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.affiliateScratchBtn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  background: linear-gradient(120deg, rgba(56, 189, 248, 0.22), rgba(167, 139, 250, 0.22));
+  color: #e0f2fe;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.affiliateScratchBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(2, 6, 23, 0.4);
+  border-color: rgba(56, 189, 248, 0.75);
+}
+
 .affiliateOk,
 .affiliateError {
   margin: 0;
@@ -4808,6 +4832,163 @@
   animation: supportMaintenanceStatusPulse 1.6s ease-in-out infinite;
 }
 
+.scratchBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(2, 6, 23, 0.6);
+  backdrop-filter: blur(6px);
+}
+
+.scratchCard {
+  position: relative;
+  width: min(380px, 100%);
+  border-radius: 18px;
+  border: 1px solid rgba(125, 211, 252, 0.4);
+  background:
+    radial-gradient(circle at 18% 10%, rgba(59, 130, 246, 0.14), transparent 42%),
+    radial-gradient(circle at 82% 24%, rgba(167, 139, 250, 0.14), transparent 44%),
+    linear-gradient(135deg, #0c1324, #0a101c 60%, #090c18);
+  padding: 18px 16px 16px;
+  box-shadow:
+    0 20px 44px rgba(2, 6, 23, 0.6),
+    0 0 20px rgba(59, 130, 246, 0.24);
+  display: grid;
+  gap: 12px;
+  text-align: center;
+  animation: scratchPop 0.28s cubic-bezier(0.2, 0.9, 0.35, 1.2);
+}
+
+.scratchClose {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  border: 0;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.scratchKicker {
+  margin: 0;
+  color: #c7d2fe;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.scratchTitle {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1.2rem;
+}
+
+.scratchArea {
+  position: relative;
+  border-radius: 14px;
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.scratchArea:hover {
+  border-color: rgba(125, 211, 252, 0.7);
+  transform: translateY(-1px);
+}
+
+.scratchHint {
+  color: #cbd5e1;
+  font-weight: 800;
+}
+
+.scratchPrize {
+  color: #f8fafc;
+  font-weight: 900;
+  font-size: 1.15rem;
+}
+
+.scratchShimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.18) 50%, transparent 100%);
+  transform: translateX(-100%);
+  animation: scratchShimmer 1.4s linear infinite;
+}
+
+.scratchAreaOpen {
+  border-style: solid;
+}
+
+.scratchCapture {
+  margin: 0;
+  color: #e0f2fe;
+  font-weight: 800;
+  font-size: 0.96rem;
+}
+
+.scratchNote {
+  margin: 0;
+  color: #c7d2fe;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.scratchActions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.scratchWhats,
+.scratchOk {
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.scratchWhats {
+  background: linear-gradient(120deg, #22c55e, #16a34a);
+  color: #052e16;
+  border: 1px solid rgba(34, 197, 94, 0.7);
+}
+
+.scratchOk {
+  background: rgba(15, 23, 42, 0.8);
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+@keyframes scratchPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scratchShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
 .supportMaintenanceTitle {
   margin: 0;
   font-size: 1.6rem;
