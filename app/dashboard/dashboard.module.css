@@ -9372,3 +9372,25 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* --- Retiros proveedor --- */
+.providerWithdrawRow {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.providerWithdrawHint {
+  font-size: 0.9rem;
+  color: #a8b5ff;
+  opacity: 0.85;
+}
+
+@media (max-width: 640px) {
+  .providerWithdrawRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -385,6 +385,7 @@ type OwnerOverview = {
   providers: number
   products: number
   orders: number
+  withdrawPending: number
 }
 
 type OwnerApprovalFilter = 'all' | 'approved' | 'pending'
@@ -394,6 +395,7 @@ type OwnerTabId =
   | 'proveedores'
   | 'productos'
   | 'recargas'
+  | 'retiros'
   | 'pedidos'
   | 'tickets'
   | 'afiliacion'
@@ -472,6 +474,20 @@ type OwnerRechargeRequest = {
   note: string
   proofUrl: string
   createdAt: string | null
+}
+
+type OwnerWithdrawRequest = {
+  id: string
+  providerId: string
+  providerName: string
+  amount: number
+  bankEntity: string
+  accountNumber: string
+  status: string
+  createdAt: string | null
+  resolvedAt: string | null
+  resolvedBy: string | null
+  ownerNote: string
 }
 
 type OwnerActivityItem = {
@@ -653,6 +669,7 @@ const OWNER_OVERVIEW_DEFAULT: OwnerOverview = {
   providers: 0,
   products: 0,
   orders: 0,
+  withdrawPending: 0,
 }
 
 const OWNER_BASE_ROLES = ['owner', 'provider', 'distributor', 'guest'] as const
@@ -1717,6 +1734,12 @@ export default function UserDashboardPage() {
   const [providerOrders, setProviderOrders] = useState<ProviderOrder[]>([])
   const [providerTickets, setProviderTickets] = useState<ProviderTicket[]>([])
   const [providerBalanceMetric, setProviderBalanceMetric] = useState(0)
+  const [showProviderWithdrawModal, setShowProviderWithdrawModal] = useState(false)
+  const [providerWithdrawAccount, setProviderWithdrawAccount] = useState('')
+  const [providerWithdrawBank, setProviderWithdrawBank] = useState('')
+  const [providerWithdrawMsg, setProviderWithdrawMsg] = useState('')
+  const [providerWithdrawError, setProviderWithdrawError] = useState('')
+  const [isProviderWithdrawSaving, setIsProviderWithdrawSaving] = useState(false)
   const [providerSideTab, setProviderSideTab] = useState<'orders' | 'tickets'>('orders')
   const [providerSelectedOrderId, setProviderSelectedOrderId] = useState<string | null>(null)
   const [providerSelectedTicketId, setProviderSelectedTicketId] = useState<string | null>(null)
@@ -1861,6 +1884,7 @@ const servicesByPlatform = useMemo(() => {
   const [ownerNewFilterSortOrder, setOwnerNewFilterSortOrder] = useState('')
   const [isOwnerProductNameFiltersLoading, setIsOwnerProductNameFiltersLoading] = useState(false)
   const [ownerRechargeRequests, setOwnerRechargeRequests] = useState<OwnerRechargeRequest[]>([])
+  const [ownerWithdrawRequests, setOwnerWithdrawRequests] = useState<OwnerWithdrawRequest[]>([])
   const [ownerReferralLinks, setOwnerReferralLinks] = useState<OwnerReferralItem[]>([])
   const [ownerRecentActivity, setOwnerRecentActivity] = useState<OwnerActivityItem[]>([])
   const [ownerSearch, setOwnerSearch] = useState('')
@@ -6558,6 +6582,47 @@ const servicesByPlatform = useMemo(() => {
     return { ok: true, reason: '' }
   }
 
+  async function handleProviderWithdrawSubmit() {
+    setProviderWithdrawError('')
+    setProviderWithdrawMsg('')
+    if (!userId) {
+      setProviderWithdrawError('Sesion invalida.')
+      return
+    }
+    const account = providerWithdrawAccount.trim()
+    const bank = providerWithdrawBank.trim()
+    if (!account || !bank) {
+      setProviderWithdrawError('Completa cuenta y entidad financiera.')
+      return
+    }
+    if (providerBalanceMetric <= 0) {
+      setProviderWithdrawError('No tienes saldo para retirar.')
+      return
+    }
+
+    setIsProviderWithdrawSaving(true)
+    try {
+      const { error } = await supabase.rpc('provider_request_withdraw', {
+        p_account: account,
+        p_bank: bank,
+      })
+      if (error) {
+        setProviderWithdrawError(error.message || 'No se pudo crear la solicitud.')
+        return
+      }
+      setProviderWithdrawMsg('Solicitud enviada. El owner la revisara.')
+      setShowProviderWithdrawModal(false)
+      setProviderWithdrawAccount('')
+      setProviderWithdrawBank('')
+      await loadProviderDashboardData()
+      if (isOwnerOrAdmin) {
+        await loadOwnerDashboardData()
+      }
+    } finally {
+      setIsProviderWithdrawSaving(false)
+    }
+  }
+
   function handleProviderOrderDraftChange(orderId: string, patch: Partial<ProviderOrderDraft>) {
     setProviderOrderDrafts(previous => {
       const key = String(orderId)
@@ -7070,13 +7135,15 @@ const servicesByPlatform = useMemo(() => {
     setOwnerMsgType('idle')
 
     try {
-      const [profilesResult, productsResult, ordersResult, ticketsResult, providerLimitsResult] = await Promise.all([
-        supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(2000),
-        supabase.from('products').select('*').order('created_at', { ascending: false }).limit(2000),
-        supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(3500),
-        supabase.from('tickets').select('*').order('created_at', { ascending: false }).limit(3500),
-        supabase.from('provider_limits').select('*').limit(3000),
-      ])
+      const [profilesResult, productsResult, ordersResult, ticketsResult, providerLimitsResult, withdrawsResult] =
+        await Promise.all([
+          supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(2000),
+          supabase.from('products').select('*').order('created_at', { ascending: false }).limit(2000),
+          supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(3500),
+          supabase.from('tickets').select('*').order('created_at', { ascending: false }).limit(3500),
+          supabase.from('provider_limits').select('*').limit(3000),
+          supabase.from('withdraw_requests').select('*').order('created_at', { ascending: false }).limit(500),
+        ])
 
       if (profilesResult.error) {
         setOwnerUsers([])
@@ -7091,6 +7158,7 @@ const servicesByPlatform = useMemo(() => {
       if (ordersResult.error) errors.push('Error cargando compras/pedidos globales.')
       if (ticketsResult.error) errors.push('Error contando tickets.')
       if (providerLimitsResult.error) errors.push('Error cargando limites de proveedor.')
+      if (withdrawsResult.error) errors.push('Error cargando retiros.')
 
       const profileRows = (profilesResult.data ?? []) as Array<Record<string, unknown>>
       const providerBalanceColumn =
@@ -7367,6 +7435,31 @@ const servicesByPlatform = useMemo(() => {
         return right - left
       })
 
+      const withdrawRowsRaw = (withdrawsResult.data ?? []) as Array<Record<string, unknown>>
+      const ownerWithdrawRows: OwnerWithdrawRequest[] = withdrawRowsRaw.map((row, index) => {
+        const providerId = toText(row.provider_id ?? row.user_id)
+        const status = normalizeOrderStatus(toText(row.status) || 'pending')
+        return {
+          id: toIdText(row.id ?? row.request_id ?? row.uuid, `withdraw-${index + 1}`),
+          providerId,
+          providerName: providerId ? usernameById.get(providerId) ?? 'Proveedor' : 'Proveedor',
+          amount: Math.max(0, toNumber(row.amount)),
+          bankEntity: toText(row.bank_entity ?? row.bank ?? row.entidad_financiera),
+          accountNumber: toText(row.account_number ?? row.cuenta ?? row.cuenta_bancaria),
+          status,
+          createdAt: toText(row.created_at) || null,
+          resolvedAt: toText(row.resolved_at) || null,
+          resolvedBy: toText(row.resolved_by) || null,
+          ownerNote: toText(row.owner_note ?? row.note),
+        }
+      })
+
+      ownerWithdrawRows.sort((a, b) => {
+        const left = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        const right = b.createdAt ? new Date(b.createdAt).getTime() : 0
+        return right - left
+      })
+
       const paidSalesByBuyer = new Map<string, number>()
       for (const order of ownerOrdersMapped) {
         if (!isPaidLikeOrderStatus(order.status)) continue
@@ -7598,8 +7691,10 @@ const servicesByPlatform = useMemo(() => {
       setOwnerTicketsGlobal(ownerTicketsMapped)
       setOwnerProviders(providerItems)
       setOwnerRechargeRequests(ownerRechargeRows)
+      setOwnerWithdrawRequests(ownerWithdrawRows)
       setOwnerReferralLinks(ownerReferralRows)
       setOwnerRecentActivity(recentActivity.slice(0, 28))
+      const withdrawPending = ownerWithdrawRows.filter(item => item.status === 'pending').length
       setOwnerOverview({
         salesTotal,
         rechargedTotal,
@@ -7610,6 +7705,7 @@ const servicesByPlatform = useMemo(() => {
         providers,
         products: ownerProductsMapped.length,
         orders: ownerOrdersMapped.length,
+        withdrawPending,
       })
 
       if (errors.length > 0) {
@@ -7624,6 +7720,7 @@ const servicesByPlatform = useMemo(() => {
       setOwnerTicketsGlobal([])
       setOwnerProviders([])
       setOwnerRechargeRequests([])
+      setOwnerWithdrawRequests([])
       setOwnerReferralLinks([])
       setOwnerRecentActivity([])
       setOwnerMsg('Error inesperado cargando panel owner.')
@@ -7847,6 +7944,25 @@ const servicesByPlatform = useMemo(() => {
       )
     })
   }, [ownerRechargeRequests, ownerSearch])
+
+  const filteredOwnerWithdraws = useMemo(() => {
+    const term = ownerSearch.trim().toLowerCase()
+    if (!term) return ownerWithdrawRequests
+    return ownerWithdrawRequests.filter(item => {
+      const status = normalizeOrderStatusInput(item.status)
+      const provider = item.providerName.toLowerCase()
+      const bank = item.bankEntity.toLowerCase()
+      const account = item.accountNumber.toLowerCase()
+      return (
+        provider.includes(term) ||
+        bank.includes(term) ||
+        account.includes(term) ||
+        status.includes(term) ||
+        item.id.toLowerCase().includes(term) ||
+        formatMoney(item.amount).toLowerCase().includes(term)
+      )
+    })
+  }, [ownerSearch, ownerWithdrawRequests])
 
   const filteredOwnerReferrals = useMemo(() => {
     const term = ownerReferralSearch.trim().toLowerCase()
@@ -8563,6 +8679,36 @@ const servicesByPlatform = useMemo(() => {
     )
   }
 
+  async function handleOwnerResolveWithdraw(request: OwnerWithdrawRequest, action: 'approve' | 'reject') {
+    if (!userId) return
+    const key = `withdraw-${request.id}-${action}`
+    setOwnerSaving(previous => ({ ...previous, [key]: true }))
+    setOwnerMsg('')
+    setOwnerMsgType('idle')
+
+    const { error } = await supabase.rpc('owner_resolve_withdraw', {
+      p_request_id: request.id,
+      p_action: action,
+      p_owner_id: userId,
+    })
+
+    setOwnerSaving(previous => ({ ...previous, [key]: false }))
+
+    if (error) {
+      setOwnerMsg(`No se pudo ${action === 'approve' ? 'aprobar' : 'rechazar'} retiro. ${error.message}`)
+      setOwnerMsgType('error')
+      return
+    }
+
+    await loadOwnerDashboardData()
+    setOwnerMsgType('ok')
+    setOwnerMsg(
+      action === 'approve'
+        ? `Retiro #${request.id} aprobado.`
+        : `Retiro #${request.id} rechazado y saldo devuelto.`
+    )
+  }
+
   useEffect(() => {
     if (currentSectionId !== 'proveedor' || !canSeeProvider || !providerAccessGranted || !userId) return
     const id = requestAnimationFrame(() => {
@@ -9003,6 +9149,7 @@ const servicesByPlatform = useMemo(() => {
   const ownerQuickCards: Array<{ label: string; value: string; tab: OwnerTabId }> = [
     { label: '💰 Ventas totales', value: formatMoney(ownerOverview.salesTotal), tab: 'resumen' },
     { label: '💳 Total recargado', value: formatMoney(ownerOverview.rechargedTotal), tab: 'recargas' },
+    { label: '💸 Retiros', value: String(ownerOverview.withdrawPending), tab: 'retiros' },
     { label: '🎫 Tickets abiertos', value: String(ownerOverview.ticketsOpen), tab: 'tickets' },
     { label: '👥 Usuarios', value: String(ownerOverview.users), tab: 'usuarios' },
     { label: '🧩 Proveedores', value: String(ownerOverview.providers), tab: 'proveedores' },
@@ -9409,6 +9556,77 @@ const servicesByPlatform = useMemo(() => {
                 </article>
               )}
 
+              {showProviderWithdrawModal && (
+                <div className={styles.providerFollowersModalBackdrop} role='presentation'>
+                  <section
+                    className={styles.providerFollowersModalCard}
+                    role='dialog'
+                    aria-modal='true'
+                    aria-labelledby='provider-withdraw-title'
+                  >
+                    <div className={styles.providerModalHead}>
+                      <div>
+                        <p className={styles.sectionEyebrow}>Retiro</p>
+                        <h4 id='provider-withdraw-title'>Retirar dinero</h4>
+                        <p className={styles.sectionLead}>Transferiremos tu saldo a la cuenta indicada.</p>
+                      </div>
+                      <button type='button' onClick={() => setShowProviderWithdrawModal(false)}>
+                        Cerrar
+                      </button>
+                    </div>
+
+                    <div className={styles.providerFollowersGrid}>
+                      <label className={styles.inputBlock}>
+                        <span>Entidad financiera</span>
+                        <input
+                          type='text'
+                          value={providerWithdrawBank}
+                          onChange={e => setProviderWithdrawBank(e.target.value)}
+                          placeholder='Banco, Yape, Plin, Binance...'
+                        />
+                      </label>
+                      <label className={styles.inputBlock}>
+                        <span>Cuenta a depositar</span>
+                        <input
+                          type='text'
+                          value={providerWithdrawAccount}
+                          onChange={e => setProviderWithdrawAccount(e.target.value)}
+                          placeholder='Numero de cuenta, CCI o ID'
+                        />
+                      </label>
+                    </div>
+
+                    {(providerWithdrawError || providerWithdrawMsg) && (
+                      <p
+                        className={`${styles.inlineError} ${styles.providerInlineErrorCard}`}
+                        style={{ color: providerWithdrawError ? '#ff9b9b' : '#a3ffc5' }}
+                      >
+                        {providerWithdrawError || providerWithdrawMsg}
+                      </p>
+                    )}
+
+                    <div className={styles.providerFollowersActions}>
+                      <button
+                        type='button'
+                        className={styles.providerGhostButton}
+                        onClick={() => setShowProviderWithdrawModal(false)}
+                        disabled={isProviderWithdrawSaving}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type='button'
+                        className={styles.primaryBtn}
+                        disabled={isProviderWithdrawSaving}
+                        onClick={() => void handleProviderWithdrawSubmit()}
+                      >
+                        {isProviderWithdrawSaving ? 'Enviando...' : 'Retirar ahora'}
+                      </button>
+                    </div>
+                  </section>
+                </div>
+              )}
+
               <header className={styles.providerHero}>
                 <div className={styles.providerHeroTop}>
                   <div className={styles.providerHeroCopy}>
@@ -9472,6 +9690,20 @@ const servicesByPlatform = useMemo(() => {
                     <span className={styles.providerHeroMetricLabel}>📈 Ventas totales</span>
                     <strong>{providerSalesTotalMetric}</strong>
                   </article>
+                </div>
+                <div className={styles.providerWithdrawRow}>
+                  <button
+                    type='button'
+                    className={styles.primaryBtn}
+                    onClick={() => {
+                      setProviderWithdrawError('')
+                      setProviderWithdrawMsg('')
+                      setShowProviderWithdrawModal(true)
+                    }}
+                  >
+                    Retirar dinero
+                  </button>
+                  <span className={styles.providerWithdrawHint}>Enviamos tu saldo a la cuenta que indiques.</span>
                 </div>
               </header>
 
@@ -12432,6 +12664,84 @@ const servicesByPlatform = useMemo(() => {
                           </div>
                         </article>
                       ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {ownerActiveTab === 'retiros' && (
+                <>
+                  <div className={styles.ownerToolbar}>
+                    <input
+                      type='search'
+                      value={ownerSearch}
+                      onChange={event => setOwnerSearch(event.target.value)}
+                      placeholder='Buscar retiro por proveedor, banco o cuenta...'
+                    />
+                    <button type='button' onClick={() => void loadOwnerDashboardData()} disabled={isOwnerLoading}>
+                      {isOwnerLoading ? 'Actualizando...' : 'Actualizar'}
+                    </button>
+                  </div>
+
+                  <p className={styles.ownerResultText}>
+                    Retiros visibles: <strong>{filteredOwnerWithdraws.length}</strong> | Pendientes:{' '}
+                    <strong>{ownerOverview.withdrawPending}</strong>
+                  </p>
+
+                  {filteredOwnerWithdraws.length === 0 ? (
+                    <p className={styles.panelEmpty}>Sin solicitudes de retiro por ahora.</p>
+                  ) : (
+                    <div className={styles.providerTicketList}>
+                      {filteredOwnerWithdraws.map(request => {
+                        const normalizedStatus = normalizeOrderStatusInput(request.status)
+                        const isPending = normalizedStatus === 'pending'
+                        const savingApprove = Boolean(ownerSaving[`withdraw-${request.id}-approve`])
+                        const savingReject = Boolean(ownerSaving[`withdraw-${request.id}-reject`])
+                        return (
+                          <article key={`owner-withdraw-${request.id}`} className={styles.providerTicketCard}>
+                            <div className={styles.providerTicketHead}>
+                              <div>
+                                <strong>{request.providerName}</strong>
+                                <p>{request.bankEntity || 'Sin banco'} | {request.accountNumber || 'Sin cuenta'}</p>
+                              </div>
+                              <span className={isPending ? styles.ownerStatePending : styles.ownerStateOk}>
+                                {normalizedStatus}
+                              </span>
+                            </div>
+                            <div className={styles.providerProductMeta}>
+                              <span>ID: {request.id}</span>
+                              <span>Monto: {formatMoney(request.amount)}</span>
+                              <span>Creado: {formatDate(request.createdAt)}</span>
+                              {request.resolvedAt && <span>Resuelto: {formatDate(request.resolvedAt)}</span>}
+                              {request.ownerNote && <span>Nota: {request.ownerNote}</span>}
+                            </div>
+                            {isPending ? (
+                              <div className={styles.ownerActionRow}>
+                                <button
+                                  type='button'
+                                  className={styles.providerGhostButton}
+                                  disabled={savingReject}
+                                  onClick={() => void handleOwnerResolveWithdraw(request, 'reject')}
+                                >
+                                  {savingReject ? 'Devolviendo...' : 'Rechazar y devolver'}
+                                </button>
+                                <button
+                                  type='button'
+                                  className={styles.primaryBtn}
+                                  disabled={savingApprove}
+                                  onClick={() => void handleOwnerResolveWithdraw(request, 'approve')}
+                                >
+                                  {savingApprove ? 'Aprobando...' : 'Aprobar retiro'}
+                                </button>
+                              </div>
+                            ) : (
+                              <div className={styles.ownerInlineActions}>
+                                <small>Resuelto por: {request.resolvedBy || 'N/D'}</small>
+                              </div>
+                            )}
+                          </article>
+                        )
+                      })}
                     </div>
                   )}
                 </>
