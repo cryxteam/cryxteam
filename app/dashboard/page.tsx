@@ -4073,9 +4073,21 @@ const servicesByPlatform = useMemo(() => {
     void loadFollowers()
     const channel = supabase
       .channel(`followers-provider-${providerId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'follower_platforms' }, loadFollowers)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'follower_packages' }, loadFollowers)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders_followers', filter: `provider_id=eq.${providerId}` }, loadFollowers)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'follower_platforms', filter: `provider_id=eq.${providerId}` },
+        loadFollowers
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'follower_packages', filter: `provider_id=eq.${providerId}` },
+        loadFollowers
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders_followers', filter: `provider_id=eq.${providerId}` },
+        loadFollowers
+      )
       .subscribe()
     return () => {
       active = false
