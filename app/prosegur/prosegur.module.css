@@ -843,7 +843,7 @@
 
 .ordersHeaderRow {
   display: grid;
-  grid-template-columns: 42px 1.1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1fr;
+  grid-template-columns: 42px 140px 76px 1fr 110px 76px 90px 170px 170px 120px;
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
@@ -864,13 +864,18 @@
 
 .ordersRow {
   display: grid;
-  grid-template-columns: 42px 1.1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1fr;
+  grid-template-columns: 42px 140px 76px 1fr 110px 76px 90px 170px 170px 120px;
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.12);
   color: #cbd5e1;
   font-size: 0.92rem;
+}
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status {
@@ -894,13 +899,23 @@
 }
 .copyBtn {
   margin-left: 6px;
-  padding: 4px 8px;
+  padding: 4px 6px;
   border: 1px solid rgba(148,163,184,0.4);
   background: rgba(15,23,42,0.8);
   color: #e2e8f0;
   border-radius: 8px;
-  font-size: 12px;
   cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+}
+.copyBtn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .readonlyField {

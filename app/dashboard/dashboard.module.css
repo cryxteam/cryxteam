@@ -1731,6 +1731,32 @@
 .secondaryBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 .secondaryBtn:hover:not(:disabled) { transform: translateY(-1px); }
 
+.providerFinishButton {
+  min-height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 197, 94, 0.55);
+  background:
+    radial-gradient(circle at 92% 50%, rgba(34, 197, 94, 0.25), transparent 40%),
+    linear-gradient(120deg, rgba(16, 185, 129, 0.85), rgba(6, 95, 70, 0.88));
+  color: #ecfdf5;
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 0 12px;
+  cursor: pointer;
+  box-shadow: 0 10px 18px rgba(2, 6, 23, 0.34);
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+.providerFinishButton:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.providerFinishButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(2, 6, 23, 0.42);
+}
+
 .providerFollowersModalBackdrop {
   position: fixed;
   inset: 0;

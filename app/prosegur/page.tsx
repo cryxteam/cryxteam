@@ -68,6 +68,8 @@ export default function ProsegurPage() {
       servicio: string
       plataforma: string
       tiempo_promedio: string | null
+      accepted_at: string | null
+      eta_hours: number | null
       created_at: string
     }>
   >([])
@@ -224,25 +226,50 @@ export default function ProsegurPage() {
     return `${hh}:${mm}`
   }
 
-  const progressForOrder = (order: { created_at: string; tiempo_promedio: string | null; estado: string }) => {
+  const slugPart = (value: string) =>
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9\-]/g, '')
+
+  const estadoLabel = (value: string) => {
+    const cleaned = value.replace(/_/g, ' ')
+    return cleaned.length ? cleaned[0].toUpperCase() + cleaned.slice(1) : cleaned
+  }
+
+  const progressForOrder = (order: {
+    created_at: string
+    accepted_at: string | null
+    eta_hours: number | null
+    tiempo_promedio: string | null
+    estado: string
+  }) => {
     if (order.estado === 'completado') return 100
     const match = order.tiempo_promedio?.match(/(\d+(?:\\.\\d+)?)\\s*h/i)
-    const hours = match ? Number(match[1]) : null
-    if (!hours || hours <= 0) return order.estado === 'en_proceso' ? 50 : 10
-    const start = new Date(order.created_at).getTime()
+    const hoursFromText = match ? Number(match[1]) : null
+    const hoursFromOrder = order.eta_hours && order.eta_hours > 0 ? order.eta_hours : null
+    const hours = hoursFromOrder ?? hoursFromText
+    if (!hours || hours <= 0) return order.estado === 'en_proceso' ? 50 : 0
+    const startIso = order.accepted_at || order.created_at
+    const start = new Date(startIso).getTime()
     const elapsed = Date.now() - start
     const totalMs = hours * 3600 * 1000
     const pct = Math.max(0, Math.min(100, (elapsed / totalMs) * 100))
-    return order.estado === 'pendiente' ? Math.min(pct, 30) : pct
+    return order.estado === 'pendiente' ? 0 : pct
   }
 
   useEffect(() => {
     if (!userId) return
     let active = true
     const loadOrders = async () => {
+      // Best-effort: auto-complete orders when ETA passes.
+      await supabase.rpc('sync_follower_orders_for_user')
       const { data } = await supabase
         .from('orders_followers')
-        .select('id,enlace,cargo,cantidad,estado,created_at,follower_packages(servicio,plataforma,tiempo_promedio)')
+        .select(
+          'id,enlace,cargo,cantidad,estado,created_at,accepted_at,eta_hours,follower_packages(servicio,plataforma,tiempo_promedio)'
+        )
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
       if (!active) return
@@ -256,6 +283,11 @@ export default function ProsegurPage() {
           servicio: ((row as any).follower_packages?.servicio as string) || '',
           plataforma: ((row as any).follower_packages?.plataforma as string) || '',
           tiempo_promedio: ((row as any).follower_packages?.tiempo_promedio as string) || null,
+          accepted_at: ((row as any).accepted_at as string) || null,
+          eta_hours:
+            (row as any).eta_hours !== undefined && (row as any).eta_hours !== null
+              ? Number((row as any).eta_hours)
+              : null,
           created_at: (row as any).created_at as string,
         })) ?? []
       setOrders(rows)
@@ -565,7 +597,7 @@ export default function ProsegurPage() {
                 <h4>Pedido creado</h4>
                 <p>Se desconto: <strong>S/ {receiptAmount.toFixed(2)}</strong></p>
                 {receiptBalance !== null && <p>Nuevo saldo: <strong>S/ {receiptBalance.toFixed(2)}</strong></p>}
-                <p>Veras el pedido en “Pedidos” en segundos.</p>
+                <p>Veras el pedido en "Pedidos" en segundos.</p>
                 <button type='button' className={styles.primaryBtn} onClick={() => setShowReceipt(false)}>
                   Entendido
                 </button>
@@ -595,39 +627,44 @@ export default function ProsegurPage() {
                 <span>Estado</span>
               </div>
               {orders.length === 0 && <div className={styles.tableEmpty}>Aun no hay pedidos aqui.</div>}
-              {orders.map(order => (
-                <div key={order.id} className={styles.ordersRow}>
-                  <label className={styles.checkboxCell}>
-                    <input type='checkbox' aria-label='Seleccionar pedido' />
-                  </label>
-                  <span className={styles.truncate}>
-                    {order.id.slice(0, 8)}{' '}
-                    <button
-                      type='button'
-                      className={styles.copyBtn}
-                      onClick={() => navigator.clipboard?.writeText(order.id).catch(() => {})}
-                    >
-                      Copiar
-                    </button>
-                  </span>
-                  <span>{formatDate(order.created_at)}</span>
-                  <span className={styles.truncate}>{order.enlace}</span>
-                  <span>S/ {order.cargo.toFixed(4)}</span>
-                  <span>{formatTime(order.created_at)}</span>
-                  <span>{order.cantidad}</span>
-                  <span>{`${order.servicio || 'Seguidores'}-${order.plataforma}`}</span>
-                  <span>
-                    <div className={styles.progressBar}>
-                      <div
-                        className={styles.progressFill}
-                        style={{ width: `${progressForOrder(order)}%` }}
-                        aria-label='Progreso'
-                      />
-                    </div>
-                  </span>
-                  <span className={`${styles.status} ${styles[`status-${order.estado}`]}`}>{order.estado}</span>
-                </div>
-              ))}
+              {orders.map(order => {
+                const pct = progressForOrder(order)
+                const computedEstado = order.estado === 'en_proceso' && pct >= 100 ? 'completado' : order.estado
+                return (
+                  <div key={order.id} className={styles.ordersRow}>
+                    <label className={styles.checkboxCell}>
+                      <input type='checkbox' aria-label='Seleccionar pedido' />
+                    </label>
+                    <span className={styles.truncate}>
+                      {order.id.slice(0, 8)}{' '}
+                      <button
+                        type='button'
+                        className={styles.copyBtn}
+                        onClick={() => navigator.clipboard?.writeText(order.id).catch(() => {})}
+                        aria-label='Copiar ID'
+                        title='Copiar'
+                      >
+                        <svg viewBox='0 0 24 24' aria-hidden='true'>
+                          <path d='M9 9h10v10H9V9z' />
+                          <path d='M5 5h10v2H7v8H5V5z' />
+                        </svg>
+                      </button>
+                    </span>
+                    <span>{formatDate(order.created_at)}</span>
+                    <span className={styles.truncate}>{order.enlace}</span>
+                    <span>S/ {order.cargo.toFixed(4)}</span>
+                    <span>{formatTime(order.created_at)}</span>
+                    <span>{order.cantidad}</span>
+                    <span>{`${slugPart(order.servicio || 'seguidores')}-${slugPart(order.plataforma || '')}`}</span>
+                    <span>
+                      <div className={styles.progressBar}>
+                        <div className={styles.progressFill} style={{ width: `${pct}%` }} aria-label='Progreso' />
+                      </div>
+                    </span>
+                    <span className={`${styles.status} ${styles[`status-${computedEstado}`]}`}>{estadoLabel(computedEstado)}</span>
+                  </div>
+                )
+              })}
             </div>
           </section>
 
