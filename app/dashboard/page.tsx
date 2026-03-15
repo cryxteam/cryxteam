@@ -4097,6 +4097,14 @@ const servicesByPlatform = useMemo(() => {
   const canSeeProvider = isProvider || isOwner
   const canSeeAdminAccounts = isOwnerOrAdmin
   const providerDisplayName = normalizeDisplayName(profile?.username) || 'Proveedor'
+
+  useEffect(() => {
+    if (!canSeeProvider) return
+    if (!profile) return
+    if (!Object.prototype.hasOwnProperty.call(profile, 'balance')) return
+    setProviderBalanceMetric(Math.max(0, toNumber(profile.balance, 0)))
+  }, [canSeeProvider, profile])
+
   const menuItems = useMemo(
     () =>
       DASHBOARD_MENU_ITEMS.filter(item => {
@@ -4950,7 +4958,10 @@ const servicesByPlatform = useMemo(() => {
       const creditedSalesTotal = normalizedOrders.reduce((sum, order) => {
         return shouldCountProviderSale(order.status, order.deliveryMode) ? sum + Math.max(0, order.amount) : sum
       }, 0)
-      const effectiveProviderBalance = providerBalanceValue
+      const effectiveProviderBalance =
+        providerBalanceRow !== null && Object.prototype.hasOwnProperty.call(providerBalanceRow, 'balance')
+          ? Math.max(0, toNumber(providerBalanceRow.balance, 0))
+          : providerBalanceValue
 
       setProviderProducts(normalizedProducts)
       setProviderOrders(normalizedOrders)
@@ -9450,7 +9461,7 @@ const servicesByPlatform = useMemo(() => {
                 </div>
                 <div className={styles.providerHeroMetricsRow}>
                   <article className={styles.providerHeroMetricCard}>
-                    <span className={styles.providerHeroMetricLabel}>💸 Saldo proveedor</span>
+                    <span className={styles.providerHeroMetricLabel}>💸 Saldo</span>
                     <strong>{formatMoney(providerBalanceMetric)}</strong>
                   </article>
                   <article className={styles.providerHeroMetricCard}>

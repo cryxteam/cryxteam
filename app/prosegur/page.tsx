@@ -113,6 +113,22 @@ export default function ProsegurPage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!userId) return
+    const channel = supabase
+      .channel(`followers-profile-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, payload => {
+        const next = (payload as any)?.new?.balance
+        if (next === null || next === undefined) return
+        const nextNum = Number(next)
+        if (Number.isFinite(nextNum)) setBalance(nextNum)
+      })
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [userId])
+
   const navClass = (isActive: boolean, isAccount = false) =>
     `${styles.navLink} ${isActive ? styles.navActive : ''} ${isAccount ? styles.accountLink : ''}`.trim()
 
@@ -545,7 +561,9 @@ export default function ProsegurPage() {
                       const newBal = payload?.new_balance ?? null
                       const cargo = payload?.cargo ?? total
                       setReceiptAmount(Number(cargo) || total)
-                      setReceiptBalance(newBal !== null ? Number(newBal) : null)
+                      const nextBalance = newBal !== null ? Number(newBal) : null
+                      setReceiptBalance(nextBalance)
+                      if (nextBalance !== null && Number.isFinite(nextBalance)) setBalance(nextBalance)
                       setShowReceipt(true)
                       setLinkInput('')
                     }
