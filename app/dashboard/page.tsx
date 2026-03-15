@@ -7438,7 +7438,7 @@ const servicesByPlatform = useMemo(() => {
       const withdrawRowsRaw = (withdrawsResult.data ?? []) as Array<Record<string, unknown>>
       const ownerWithdrawRows: OwnerWithdrawRequest[] = withdrawRowsRaw.map((row, index) => {
         const providerId = toText(row.provider_id ?? row.user_id)
-        const status = normalizeOrderStatus(toText(row.status) || 'pending')
+        const status = normalizeOrderStatusInput(toText(row.status) || 'pending')
         return {
           id: toIdText(row.id ?? row.request_id ?? row.uuid, `withdraw-${index + 1}`),
           providerId,
