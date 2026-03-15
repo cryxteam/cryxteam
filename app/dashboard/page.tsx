@@ -9559,7 +9559,7 @@ const servicesByPlatform = useMemo(() => {
               {showProviderWithdrawModal && (
                 <div className={styles.providerFollowersModalBackdrop} role='presentation'>
                   <section
-                    className={styles.providerFollowersModalCard}
+                    className={`${styles.providerFollowersModalCard} ${styles.providerWithdrawCard}`}
                     role='dialog'
                     aria-modal='true'
                     aria-labelledby='provider-withdraw-title'
@@ -9570,12 +9570,16 @@ const servicesByPlatform = useMemo(() => {
                         <h4 id='provider-withdraw-title'>Retirar dinero</h4>
                         <p className={styles.sectionLead}>Transferiremos tu saldo a la cuenta indicada.</p>
                       </div>
-                      <button type='button' onClick={() => setShowProviderWithdrawModal(false)}>
+                      <button
+                        type='button'
+                        className={styles.providerGhostButton}
+                        onClick={() => setShowProviderWithdrawModal(false)}
+                      >
                         Cerrar
                       </button>
                     </div>
 
-                    <div className={styles.providerFollowersGrid}>
+                    <div className={styles.providerWithdrawGrid}>
                       <label className={styles.inputBlock}>
                         <span>Entidad financiera</span>
                         <input
@@ -9616,7 +9620,7 @@ const servicesByPlatform = useMemo(() => {
                       </button>
                       <button
                         type='button'
-                        className={styles.primaryBtn}
+                        className={styles.primaryBtnSolid}
                         disabled={isProviderWithdrawSaving}
                         onClick={() => void handleProviderWithdrawSubmit()}
                       >
@@ -9694,7 +9698,7 @@ const servicesByPlatform = useMemo(() => {
                 <div className={styles.providerWithdrawRow}>
                   <button
                     type='button'
-                    className={styles.primaryBtn}
+                    className={styles.primaryBtnSolid}
                     onClick={() => {
                       setProviderWithdrawError('')
                       setProviderWithdrawMsg('')
