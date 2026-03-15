@@ -1787,6 +1787,27 @@ const [showFollowersModal, setShowFollowersModal] = useState(false)
 const [showFollowersPanel, setShowFollowersPanel] = useState(false)
 const [followersNewPlatform, setFollowersNewPlatform] = useState('')
 const [followersPlatforms, setFollowersPlatforms] = useState<string[]>([])
+const [followerOrders, setFollowerOrders] = useState<
+  Array<{
+    id: string
+    enlace: string
+    cargo: number
+    cantidad: number
+    estado: string
+    servicio: string
+    plataforma: string
+    created_at: string
+  }>
+>([])
+const servicesByPlatform = useMemo(() => {
+  const map = new Map<string, number>()
+  for (const pkg of followerPackages) {
+    const key = (pkg.plataforma || '').trim()
+    if (!key) continue
+    map.set(key, (map.get(key) ?? 0) + 1)
+  }
+  return map
+}, [followerPackages])
   const [providerOrderDrafts, setProviderOrderDrafts] = useState<Record<string, ProviderOrderDraft>>({})
   const [providerOrderSaving, setProviderOrderSaving] = useState<Record<string, boolean>>({})
   const [providerTicketDrafts, setProviderTicketDrafts] = useState<Record<string, ProviderTicketDraft>>({})
@@ -4007,7 +4028,7 @@ const [followersPlatforms, setFollowersPlatforms] = useState<string[]>([])
     if (!isProvider || !providerId) return
     let active = true
     const loadFollowers = async () => {
-      const [{ data: platformRows }, { data: packageRows }] = await Promise.all([
+      const [{ data: platformRows }, { data: packageRows }, { data: ordersRows }] = await Promise.all([
         supabase
           .from('follower_platforms')
           .select('plataforma')
@@ -4018,16 +4039,37 @@ const [followersPlatforms, setFollowersPlatforms] = useState<string[]>([])
           .select('id,categoria,plataforma,servicio,descripcion,detalles,notas,precio_por_mil,tiempo_promedio')
           .eq('provider_id', providerId)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('orders_followers')
+          .select('id,enlace,cargo,cantidad,estado,created_at,follower_packages(servicio,plataforma)')
+          .eq('provider_id', providerId)
+          .order('created_at', { ascending: false })
+          .limit(50),
       ])
       if (!active) return
       if (platformRows) setFollowersPlatforms(platformRows.map(row => row.plataforma))
       if (packageRows) setFollowerPackages(packageRows)
+      if (ordersRows) {
+        setFollowerOrders(
+          ordersRows.map(row => ({
+            id: (row as any).id as string,
+            enlace: (row as any).enlace || '',
+            cargo: Number((row as any).cargo) || 0,
+            cantidad: Number((row as any).cantidad) || 0,
+            estado: ((row as any).estado as string) || 'pendiente',
+            servicio: ((row as any).follower_packages?.servicio as string) || '',
+            plataforma: ((row as any).follower_packages?.plataforma as string) || '',
+            created_at: (row as any).created_at as string,
+          }))
+        )
+      }
     }
     void loadFollowers()
     const channel = supabase
       .channel(`followers-provider-${providerId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'follower_platforms' }, loadFollowers)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'follower_packages' }, loadFollowers)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders_followers', filter: `provider_id=eq.${providerId}` }, loadFollowers)
       .subscribe()
     return () => {
       active = false
@@ -9434,7 +9476,7 @@ const [followersPlatforms, setFollowersPlatforms] = useState<string[]>([])
 
                     <div className={styles.providerFollowersGrid}>
                       <label className={styles.inputBlock}>
-                        <span>Servicio</span>
+                        <span>Servicio (ej: Seguidores, Likes, Vistas)</span>
                         <input
                           type='text'
                           value={followersForm.servicio}
@@ -9577,7 +9619,7 @@ const [followersPlatforms, setFollowersPlatforms] = useState<string[]>([])
                             type='text'
                             value={followersNewPlatform}
                             onChange={e => setFollowersNewPlatform(e.target.value)}
-                            placeholder='Instagram, TikTok, YouTube...'
+                            placeholder='Ej: Instagram, TikTok, YouTube'
                           />
                         </label>
                         <div className={styles.providerFollowersActions}>
@@ -9594,7 +9636,7 @@ const [followersPlatforms, setFollowersPlatforms] = useState<string[]>([])
                               setFollowersNewPlatform('')
                             }}
                           >
-                            Agregar red
+                            Agregar red y seguir
                           </button>
                         </div>
                       </div>
@@ -9623,9 +9665,62 @@ const [followersPlatforms, setFollowersPlatforms] = useState<string[]>([])
                               setShowFollowersModal(true)
                             }}
                           >
-                            {platform}
+                            <span className={styles.chipTitle}>{platform}</span>
+                            <span className={styles.chipHint}>
+                              {servicesByPlatform.get(platform) ?? 0} servicios
+                            </span>
                           </button>
                         ))}
+                      </div>
+
+                      <div className={styles.providerFollowersOrders}>
+                        <div className={styles.providerOrdersHead}>
+                          <p className={styles.sectionEyebrow}>Pedidos de seguidores</p>
+                          <p className={styles.sectionLead}>Acepta para acreditar tu saldo.</p>
+                        </div>
+                        <div className={styles.providerOrdersTable}>
+                          <div className={styles.providerOrdersHeader}>
+                            <span>ID</span>
+                            <span>Fecha</span>
+                            <span>Enlace</span>
+                            <span>Cantidad</span>
+                            <span>Servicio</span>
+                            <span>Cargo</span>
+                            <span>Estado</span>
+                            <span></span>
+                          </div>
+                          {followerOrders.length === 0 && <div className={styles.providerOrdersEmpty}>No hay pedidos.</div>}
+                          {followerOrders.map(order => (
+                            <div key={order.id} className={styles.providerOrdersRow}>
+                              <span className={styles.truncate}>{order.id.slice(0, 8)}</span>
+                              <span>{new Date(order.created_at).toLocaleString()}</span>
+                              <span className={styles.truncate}>{order.enlace}</span>
+                              <span>{order.cantidad}</span>
+                              <span>{`${order.plataforma} ${order.servicio}`}</span>
+                              <span>S/ {order.cargo.toFixed(4)}</span>
+                              <span className={styles.status}>{order.estado}</span>
+                              <span>
+                                {order.estado === 'pendiente' ? (
+                                  <button
+                                    type='button'
+                                    className={styles.primaryBtn}
+                                    onClick={async () => {
+                                      if (!providerId) return
+                                      await supabase.rpc('accept_follower_order', {
+                                        p_order_id: order.id,
+                                        p_provider_id: providerId,
+                                      })
+                                    }}
+                                  >
+                                    Aceptar
+                                  </button>
+                                ) : (
+                                  '-'
+                                )}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}

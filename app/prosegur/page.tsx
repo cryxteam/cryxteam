@@ -47,11 +47,26 @@ export default function ProsegurPage() {
   const [accountLabel, setAccountLabel] = useState('Ingresa')
   const [accountHref, setAccountHref] = useState('/login')
   const [balance, setBalance] = useState<number | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [activeSection, setActiveSection] = useState('nuevo')
-  const [selectedCategory, setSelectedCategory] = useState('Todo')
+  const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
   const [quantityInput, setQuantityInput] = useState('1000')
+  const [linkInput, setLinkInput] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitMsg, setSubmitMsg] = useState<string | null>(null)
+  const [orders, setOrders] = useState<
+    Array<{
+      id: string
+      enlace: string
+      cargo: number
+      cantidad: number
+      estado: string
+      servicio: string
+      plataforma: string
+      created_at: string
+    }>
+  >([])
   const rechargeRef = useRef<HTMLDivElement | null>(null)
   const [platforms, setPlatforms] = useState<string[]>([])
   const [packages, setPackages] = useState<FollowerPackageRow[]>([])
@@ -71,6 +86,7 @@ export default function ProsegurPage() {
         setAccountHref('/login')
         return
       }
+      setUserId(user.id)
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -127,8 +143,15 @@ export default function ProsegurPage() {
 
   const categories: Category[] = useMemo(() => {
     const uniquePlatforms = Array.from(new Set(platforms.map(item => item.trim()).filter(Boolean)))
-    const options = uniquePlatforms.map(item => ({ id: item, label: item }))
-    return [{ id: 'Todo', label: 'Todo' }, ...options]
+    return uniquePlatforms.map(item => ({ id: item, label: item }))
+  }, [platforms])
+
+  useEffect(() => {
+    if (platforms.length === 0) return
+    setSelectedCategory(prev => {
+      if (prev && platforms.includes(prev)) return prev
+      return platforms[0]
+    })
   }, [platforms])
 
   const loadCatalog = useMemo(
@@ -166,15 +189,11 @@ export default function ProsegurPage() {
   }, [loadCatalog])
 
   const filteredPackages = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase()
     return packages.filter(pkg => {
-      const matchesCategory = selectedCategory === 'Todo' ? true : pkg.plataforma === selectedCategory
-      const matchesSearch =
-        term.length === 0 ||
-        `${pkg.plataforma} ${pkg.servicio} ${pkg.categoria}`.toLowerCase().includes(term)
-      return matchesCategory && matchesSearch
+      const matchesCategory = selectedCategory ? pkg.plataforma === selectedCategory : true
+      return matchesCategory
     })
-  }, [packages, searchTerm, selectedCategory])
+  }, [packages, selectedCategory])
 
   useEffect(() => {
     const first = filteredPackages[0]?.id ?? null
@@ -185,6 +204,44 @@ export default function ProsegurPage() {
     () => filteredPackages.find(pkg => pkg.id === selectedServiceId) ?? filteredPackages[0] ?? null,
     [filteredPackages, selectedServiceId]
   )
+
+  useEffect(() => {
+    if (!userId) return
+    let active = true
+    const loadOrders = async () => {
+      const { data } = await supabase
+        .from('orders_followers')
+        .select('id,enlace,cargo,cantidad,estado,created_at,follower_packages(servicio,plataforma)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      if (!active) return
+      const rows =
+        data?.map(row => ({
+          id: (row as any).id as string,
+          enlace: (row as any).enlace || '',
+          cargo: Number((row as any).cargo) || 0,
+          cantidad: Number((row as any).cantidad) || 0,
+          estado: ((row as any).estado as string) || 'pendiente',
+          servicio: ((row as any).follower_packages?.servicio as string) || '',
+          plataforma: ((row as any).follower_packages?.plataforma as string) || '',
+          created_at: (row as any).created_at as string,
+        })) ?? []
+      setOrders(rows)
+    }
+    void loadOrders()
+    const channel = supabase
+      .channel(`followers-orders-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders_followers', filter: `user_id=eq.${userId}` },
+        loadOrders
+      )
+      .subscribe()
+    return () => {
+      active = false
+      void supabase.removeChannel(channel)
+    }
+  }, [userId])
 
   const quantity = Math.max(0, Number(quantityInput || 0))
   const unitPrice = selectedPackage?.precio_por_mil ?? 0
@@ -314,17 +371,6 @@ export default function ProsegurPage() {
                 </div>
 
                 <label className={styles.inputBlock}>
-                  <span>Buscar servicio</span>
-                  <input
-                    className={styles.searchInput}
-                    type='text'
-                    placeholder='Busca por nombre...'
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                  />
-                </label>
-
-                <label className={styles.inputBlock}>
                   <span>Categoria</span>
                   <div className={styles.selectWrap}>
                     <select
@@ -351,7 +397,7 @@ export default function ProsegurPage() {
                     >
                       {filteredPackages.map(pkg => (
                         <option key={pkg.id} value={pkg.id}>
-                          {`${pkg.plataforma} ${pkg.servicio} | ${pkg.categoria} | S/ ${pkg.precio_por_mil} por 1000`}
+                          {`${pkg.plataforma} - ${pkg.servicio} | ${pkg.categoria} | S/ ${pkg.precio_por_mil} por 1000`}
                         </option>
                       ))}
                     </select>
@@ -360,7 +406,12 @@ export default function ProsegurPage() {
 
                 <label className={styles.inputBlock}>
                   <span>Enlace</span>
-                  <input type='text' placeholder='Pega el enlace o @usuario' />
+                  <input
+                    type='text'
+                    placeholder='Pega el enlace o @usuario'
+                    value={linkInput}
+                    onChange={e => setLinkInput(e.target.value)}
+                  />
                 </label>
 
                 <label className={styles.inputBlock}>
@@ -401,9 +452,39 @@ export default function ProsegurPage() {
                   </ol>
                 </div>
 
-                <button type='button' className={styles.primaryBtn}>
-                  Crear pedido
+                <button
+                  type='button'
+                  className={styles.primaryBtn}
+                  disabled={isSubmitting || !selectedPackage || !linkInput.trim()}
+                  onClick={async () => {
+                    if (!selectedPackage) return
+                    setIsSubmitting(true)
+                    setSubmitMsg(null)
+                    const { data: userResp } = await supabase.auth.getUser()
+                    const uid = userResp?.user?.id
+                    if (!uid) {
+                      setSubmitMsg('Inicia sesion para crear pedidos.')
+                      setIsSubmitting(false)
+                      return
+                    }
+                    const { error } = await supabase.rpc('place_follower_order', {
+                      p_user_id: uid,
+                      p_pkg_id: selectedPackage.id,
+                      p_enlace: linkInput.trim(),
+                      p_cantidad: quantity,
+                    })
+                    if (error) {
+                      setSubmitMsg('No se pudo crear el pedido. Revisa tu saldo o intenta de nuevo.')
+                    } else {
+                      setSubmitMsg('Pedido creado. Lo veras en Pedidos en segundos.')
+                      setLinkInput('')
+                    }
+                    setIsSubmitting(false)
+                  }}
+                >
+                  {isSubmitting ? 'Creando...' : 'Crear pedido'}
                 </button>
+                {submitMsg && <p className={styles.helperText}>{submitMsg}</p>}
               </div>
 
               <aside className={styles.descPanel}>
@@ -462,7 +543,23 @@ export default function ProsegurPage() {
                 <span>Restan</span>
                 <span>Estado</span>
               </div>
-              <div className={styles.tableEmpty}>Aun no hay pedidos aqui.</div>
+              {orders.length === 0 && <div className={styles.tableEmpty}>Aun no hay pedidos aqui.</div>}
+              {orders.map(order => (
+                <div key={order.id} className={styles.ordersRow}>
+                  <label className={styles.checkboxCell}>
+                    <input type='checkbox' aria-label='Seleccionar pedido' />
+                  </label>
+                  <span className={styles.truncate}>{order.id.slice(0, 8)}</span>
+                  <span>{new Date(order.created_at).toLocaleString()}</span>
+                  <span className={styles.truncate}>{order.enlace}</span>
+                  <span>S/ {order.cargo.toFixed(4)}</span>
+                  <span>-</span>
+                  <span>{order.cantidad}</span>
+                  <span>{`${order.plataforma} ${order.servicio}`}</span>
+                  <span>-</span>
+                  <span className={styles.status}>{order.estado}</span>
+                </div>
+              ))}
             </div>
           </section>
 
