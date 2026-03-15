@@ -843,7 +843,7 @@
 
 .ordersHeaderRow {
   display: grid;
-  grid-template-columns: 42px 1.1fr 1.1fr 2fr 1fr 1fr 1fr 1.2fr 1fr 1fr;
+  grid-template-columns: 42px 1.1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1fr;
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
@@ -860,6 +860,47 @@
 }
 .helperText {
   color: #94a3b8;
+}
+
+.ordersRow {
+  display: grid;
+  grid-template-columns: 42px 1.1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+  font-size: 0.92rem;
+}
+
+.status {
+  text-transform: capitalize;
+  font-weight: 700;
+}
+.status-pendiente { color: #f59e0b; }
+.status-en_proceso { color: #38bdf8; }
+.status-completado { color: #22c55e; }
+.progressBar {
+  width: 100%;
+  height: 10px;
+  background: rgba(148, 163, 184, 0.15);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #22d3ee, #a855f7);
+  transition: width 0.4s ease;
+}
+.copyBtn {
+  margin-left: 6px;
+  padding: 4px 8px;
+  border: 1px solid rgba(148,163,184,0.4);
+  background: rgba(15,23,42,0.8);
+  color: #e2e8f0;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .readonlyField {

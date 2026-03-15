@@ -67,6 +67,7 @@ export default function ProsegurPage() {
       estado: string
       servicio: string
       plataforma: string
+      tiempo_promedio: string | null
       created_at: string
     }>
   >([])
@@ -208,13 +209,40 @@ export default function ProsegurPage() {
     [filteredPackages, selectedServiceId]
   )
 
+  const formatDate = (iso: string) => {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return '-'
+    const day = d.getDate().toString().padStart(2, '0')
+    const month = (d.getMonth() + 1).toString().padStart(2, '0')
+    return `${day}/${month}`
+  }
+  const formatTime = (iso: string) => {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return '-'
+    const hh = d.getHours().toString().padStart(2, '0')
+    const mm = d.getMinutes().toString().padStart(2, '0')
+    return `${hh}:${mm}`
+  }
+
+  const progressForOrder = (order: { created_at: string; tiempo_promedio: string | null; estado: string }) => {
+    if (order.estado === 'completado') return 100
+    const match = order.tiempo_promedio?.match(/(\d+(?:\\.\\d+)?)\\s*h/i)
+    const hours = match ? Number(match[1]) : null
+    if (!hours || hours <= 0) return order.estado === 'en_proceso' ? 50 : 10
+    const start = new Date(order.created_at).getTime()
+    const elapsed = Date.now() - start
+    const totalMs = hours * 3600 * 1000
+    const pct = Math.max(0, Math.min(100, (elapsed / totalMs) * 100))
+    return order.estado === 'pendiente' ? Math.min(pct, 30) : pct
+  }
+
   useEffect(() => {
     if (!userId) return
     let active = true
     const loadOrders = async () => {
       const { data } = await supabase
         .from('orders_followers')
-        .select('id,enlace,cargo,cantidad,estado,created_at,follower_packages(servicio,plataforma)')
+        .select('id,enlace,cargo,cantidad,estado,created_at,follower_packages(servicio,plataforma,tiempo_promedio)')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
       if (!active) return
@@ -227,6 +255,7 @@ export default function ProsegurPage() {
           estado: ((row as any).estado as string) || 'pendiente',
           servicio: ((row as any).follower_packages?.servicio as string) || '',
           plataforma: ((row as any).follower_packages?.plataforma as string) || '',
+          tiempo_promedio: ((row as any).follower_packages?.tiempo_promedio as string) || null,
           created_at: (row as any).created_at as string,
         })) ?? []
       setOrders(rows)
@@ -562,7 +591,7 @@ export default function ProsegurPage() {
                 <span>Inicio</span>
                 <span>Cantidad</span>
                 <span>Servicio</span>
-                <span>Restan</span>
+                <span>Progreso</span>
                 <span>Estado</span>
               </div>
               {orders.length === 0 && <div className={styles.tableEmpty}>Aun no hay pedidos aqui.</div>}
@@ -571,15 +600,32 @@ export default function ProsegurPage() {
                   <label className={styles.checkboxCell}>
                     <input type='checkbox' aria-label='Seleccionar pedido' />
                   </label>
-                  <span className={styles.truncate}>{order.id.slice(0, 8)}</span>
-                  <span>{new Date(order.created_at).toLocaleString()}</span>
+                  <span className={styles.truncate}>
+                    {order.id.slice(0, 8)}{' '}
+                    <button
+                      type='button'
+                      className={styles.copyBtn}
+                      onClick={() => navigator.clipboard?.writeText(order.id).catch(() => {})}
+                    >
+                      Copiar
+                    </button>
+                  </span>
+                  <span>{formatDate(order.created_at)}</span>
                   <span className={styles.truncate}>{order.enlace}</span>
                   <span>S/ {order.cargo.toFixed(4)}</span>
-                  <span>-</span>
+                  <span>{formatTime(order.created_at)}</span>
                   <span>{order.cantidad}</span>
-                  <span>{`${order.plataforma} ${order.servicio}`}</span>
-                  <span>-</span>
-                  <span className={styles.status}>{order.estado}</span>
+                  <span>{`${order.servicio || 'Seguidores'}-${order.plataforma}`}</span>
+                  <span>
+                    <div className={styles.progressBar}>
+                      <div
+                        className={styles.progressFill}
+                        style={{ width: `${progressForOrder(order)}%` }}
+                        aria-label='Progreso'
+                      />
+                    </div>
+                  </span>
+                  <span className={`${styles.status} ${styles[`status-${order.estado}`]}`}>{order.estado}</span>
                 </div>
               ))}
             </div>

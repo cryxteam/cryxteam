@@ -9626,7 +9626,7 @@ const servicesByPlatform = useMemo(() => {
                         <div className={styles.providerFollowersActions}>
                           <button
                             type='button'
-                            className={styles.primaryBtn}
+                            className={styles.primaryBtnSolid}
                             onClick={async () => {
                               const next = followersNewPlatform.trim()
                               if (!next || !providerId) return
@@ -9704,7 +9704,7 @@ const servicesByPlatform = useMemo(() => {
                                 {order.estado === 'pendiente' ? (
                                   <button
                                     type='button'
-                                    className={styles.primaryBtn}
+                                    className={styles.primaryBtnSolid}
                                     disabled={!!followerOrdersAccepting[order.id]}
                                     onClick={async () => {
                                       if (!providerId) return
@@ -9723,6 +9723,29 @@ const servicesByPlatform = useMemo(() => {
                                     }}
                                   >
                                     {followerOrdersAccepting[order.id] ? 'Procesando...' : 'Aceptar'}
+                                  </button>
+                                ) : order.estado === 'en_proceso' ? (
+                                  <button
+                                    type='button'
+                                    className={styles.secondaryBtn}
+                                    disabled={!!followerOrdersAccepting[order.id]}
+                                    onClick={async () => {
+                                      if (!providerId) return
+                                      setFollowerOrdersAccepting(prev => ({ ...prev, [order.id]: true }))
+                                      const { error } = await supabase.rpc('finish_follower_order', {
+                                        p_order_id: order.id,
+                                        p_provider_id: providerId,
+                                      })
+                                      if (error) {
+                                        setFollowerOrdersAccepting(prev => {
+                                          const next = { ...prev }
+                                          delete next[order.id]
+                                          return next
+                                        })
+                                      }
+                                    }}
+                                  >
+                                    {followerOrdersAccepting[order.id] ? 'Cerrando...' : 'Finalizar orden'}
                                   </button>
                                 ) : (
                                   '-'
