@@ -1799,6 +1799,7 @@ const [followerOrders, setFollowerOrders] = useState<
     created_at: string
   }>
 >([])
+const [followerOrdersAccepting, setFollowerOrdersAccepting] = useState<Record<string, boolean>>({})
 const servicesByPlatform = useMemo(() => {
   const map = new Map<string, number>()
   for (const pkg of followerPackages) {
@@ -9704,15 +9705,24 @@ const servicesByPlatform = useMemo(() => {
                                   <button
                                     type='button'
                                     className={styles.primaryBtn}
+                                    disabled={!!followerOrdersAccepting[order.id]}
                                     onClick={async () => {
                                       if (!providerId) return
-                                      await supabase.rpc('accept_follower_order', {
+                                      setFollowerOrdersAccepting(prev => ({ ...prev, [order.id]: true }))
+                                      const { error } = await supabase.rpc('accept_follower_order', {
                                         p_order_id: order.id,
                                         p_provider_id: providerId,
                                       })
+                                      if (error) {
+                                        setFollowerOrdersAccepting(prev => {
+                                          const next = { ...prev }
+                                          delete next[order.id]
+                                          return next
+                                        })
+                                      }
                                     }}
                                   >
-                                    Aceptar
+                                    {followerOrdersAccepting[order.id] ? 'Procesando...' : 'Aceptar'}
                                   </button>
                                 ) : (
                                   '-'

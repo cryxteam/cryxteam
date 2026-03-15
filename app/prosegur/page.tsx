@@ -55,6 +55,9 @@ export default function ProsegurPage() {
   const [linkInput, setLinkInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitMsg, setSubmitMsg] = useState<string | null>(null)
+  const [showReceipt, setShowReceipt] = useState(false)
+  const [receiptAmount, setReceiptAmount] = useState<number>(0)
+  const [receiptBalance, setReceiptBalance] = useState<number | null>(null)
   const [orders, setOrders] = useState<
     Array<{
       id: string
@@ -467,7 +470,7 @@ export default function ProsegurPage() {
                       setIsSubmitting(false)
                       return
                     }
-                    const { error } = await supabase.rpc('place_follower_order', {
+                    const { error, data } = await supabase.rpc('place_follower_order', {
                       p_user_id: uid,
                       p_pkg_id: selectedPackage.id,
                       p_enlace: linkInput.trim(),
@@ -477,6 +480,12 @@ export default function ProsegurPage() {
                       setSubmitMsg('No se pudo crear el pedido. Revisa tu saldo o intenta de nuevo.')
                     } else {
                       setSubmitMsg('Pedido creado. Lo veras en Pedidos en segundos.')
+                      const payload = Array.isArray(data) ? data[0] : null
+                      const newBal = payload?.new_balance ?? null
+                      const cargo = payload?.cargo ?? total
+                      setReceiptAmount(Number(cargo) || total)
+                      setReceiptBalance(newBal !== null ? Number(newBal) : null)
+                      setShowReceipt(true)
                       setLinkInput('')
                     }
                     setIsSubmitting(false)
@@ -521,6 +530,19 @@ export default function ProsegurPage() {
               </aside>
             </div>
           </section>
+          {showReceipt && (
+            <div className={styles.modalOverlay} role='dialog' aria-modal='true'>
+              <div className={styles.modalCard}>
+                <h4>Pedido creado</h4>
+                <p>Se desconto: <strong>S/ {receiptAmount.toFixed(2)}</strong></p>
+                {receiptBalance !== null && <p>Nuevo saldo: <strong>S/ {receiptBalance.toFixed(2)}</strong></p>}
+                <p>Veras el pedido en “Pedidos” en segundos.</p>
+                <button type='button' className={styles.primaryBtn} onClick={() => setShowReceipt(false)}>
+                  Entendido
+                </button>
+              </div>
+            </div>
+          )}
 
           <section className={`${styles.contentCard} ${activeSection !== 'pedidos' ? styles.cardHidden : ''}`}>
             <div className={styles.cardHeader}>
