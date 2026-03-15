@@ -1706,6 +1706,9 @@
 .providerOrdersHeader { font-weight: 700; color: #e2e8f0; font-size: 13px; }
 .providerOrdersRow { background: linear-gradient(120deg, rgba(16,22,36,0.9), rgba(11,16,28,0.9)); padding: 10px 12px; border-radius: 12px; color: #e2e8f0; font-size: 13px; border: 1px solid rgba(148,163,184,0.16); }
 .providerOrdersEmpty { color: #94a3b8; font-size: 13px; }
+.providerOrdersMsg { margin: 0 0 8px; font-size: 13px; }
+.providerOrdersMsgError { color: #fca5a5; }
+.providerOrdersMsgOk { color: #86efac; }
 .primaryBtnSolid {
   background: linear-gradient(90deg, #22d3ee, #6366f1);
   color: #0b1020;

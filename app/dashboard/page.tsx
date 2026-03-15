@@ -1800,6 +1800,9 @@ const [followerOrders, setFollowerOrders] = useState<
   }>
 >([])
 const [followerOrdersAccepting, setFollowerOrdersAccepting] = useState<Record<string, boolean>>({})
+const [followerOrdersFeedback, setFollowerOrdersFeedback] = useState<{ type: 'ok' | 'error'; text: string } | null>(
+  null
+)
 const servicesByPlatform = useMemo(() => {
   const map = new Map<string, number>()
   for (const pkg of followerPackages) {
@@ -9681,6 +9684,17 @@ const servicesByPlatform = useMemo(() => {
                           <p className={styles.sectionEyebrow}>Pedidos de seguidores</p>
                           <p className={styles.sectionLead}>Acepta para acreditar tu saldo.</p>
                         </div>
+                        {followerOrdersFeedback && (
+                          <p
+                            className={`${styles.providerOrdersMsg} ${
+                              followerOrdersFeedback.type === 'error'
+                                ? styles.providerOrdersMsgError
+                                : styles.providerOrdersMsgOk
+                            }`}
+                          >
+                            {followerOrdersFeedback.text}
+                          </p>
+                        )}
                         <div className={styles.providerOrdersTable}>
                           <div className={styles.providerOrdersHeader}>
                             <span>ID</span>
@@ -9720,7 +9734,11 @@ const servicesByPlatform = useMemo(() => {
                                         delete next[order.id]
                                         return next
                                       })
-                                      if (error) return
+                                      if (error) {
+                                        setFollowerOrdersFeedback({ type: 'error', text: error.message })
+                                        return
+                                      }
+                                      setFollowerOrdersFeedback({ type: 'ok', text: 'Pedido aceptado. Ahora esta en proceso.' })
                                     }}
                                   >
                                     {followerOrdersAccepting[order.id] ? 'Procesando...' : 'Aceptar'}
@@ -9737,12 +9755,35 @@ const servicesByPlatform = useMemo(() => {
                                         p_order_id: order.id,
                                         p_provider_id: providerId,
                                       })
+                                      if (error) {
+                                        // Fallback: allow direct update if provider has RLS update policy.
+                                        const fallback = await supabase
+                                          .from('orders_followers')
+                                          .update({ estado: 'completado' })
+                                          .eq('id', order.id)
+                                          .eq('provider_id', providerId)
+                                          .eq('estado', 'en_proceso')
+                                        setFollowerOrdersAccepting(prev => {
+                                          const next = { ...prev }
+                                          delete next[order.id]
+                                          return next
+                                        })
+                                        if (fallback.error) {
+                                          setFollowerOrdersFeedback({
+                                            type: 'error',
+                                            text: fallback.error.message || error.message,
+                                          })
+                                          return
+                                        }
+                                        setFollowerOrdersFeedback({ type: 'ok', text: 'Orden finalizada (fallback). Estado: completado.' })
+                                        return
+                                      }
                                       setFollowerOrdersAccepting(prev => {
                                         const next = { ...prev }
                                         delete next[order.id]
                                         return next
                                       })
-                                      if (error) return
+                                      setFollowerOrdersFeedback({ type: 'ok', text: 'Orden finalizada. Estado: completado.' })
                                     }}
                                   >
                                     {followerOrdersAccepting[order.id] ? 'Cerrando...' : 'Finalizar orden'}
